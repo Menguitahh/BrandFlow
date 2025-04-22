@@ -1,8 +1,8 @@
 from django.urls import path, include 
 from rest_framework import routers
-from BrandApp import views
+from brand_control import views
 router = routers.DefaultRouter()
-router.register(r'User', views.UserSerializerView, basename='User')
+# router.register(r'User', views.UserSerializerView, basename='User')
 router.register(r'Product', views.ProductSerializerView, basename='Product')
 router.register(r'category', views.CategorySerializerView, basename='category')
 router.register(r'Order', views.OrderSerializerView, basename='Order')
@@ -15,6 +15,6 @@ router.register(r'Reviews', views.ReviewsSerializerView, basename='Reviews')
 
 
 urlpatterns = [
-    path('BrandApp/model/', include(router.urls)),
+    path('brand_control/model/', include(router.urls)),
     
 ]

@@ -3,16 +3,16 @@ from django.utils import timezone
 
 
 # Create your models here.
-class User(models.Model):
-    iduser = models.AutoField(primary_key=True)  #! los PK esperar a confirmar si se necesita o no    
-    password = models.CharField(max_length=100,)
-    email = models.EmailField(max_length=100,)
-    phone = models.CharField(max_length=15,)
-    addres = models.CharField(max_length=100,)
-    username = models.CharField(max_length=100,)
-    roles = models.CharField(max_length=50, default='cliente')  # o el valor por defecto que quieras
-    def __str__(self):
-        return self.username
+# class User(models.Model):
+#     iduser = models.AutoField(primary_key=True)  #! los PK esperar a confirmar si se necesita o no    
+#     password = models.CharField(max_length=100,)
+#     email = models.EmailField(max_length=100,)
+#     phone = models.CharField(max_length=15,)
+#     addres = models.CharField(max_length=100,)
+#     username = models.CharField(max_length=100,)
+#     roles = models.CharField(max_length=50, default='cliente')  # o el valor por defecto que quieras
+#     def __str__(self):
+#         return self.username
 
 
 class Product(models.Model):
@@ -39,7 +39,7 @@ class Order(models.Model):
     date = models.DateField(default=timezone.now)
     total = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=100,)
-    iduser = models.ForeignKey(User, on_delete=models.CASCADE) #! arreglar/asociar con usuario 
+    # iduser = models.ForeignKey(User, on_delete=models.CASCADE) #! arreglar/asociar con usuario 
     def __str__(self):
         return str(self.idorder)
     
@@ -72,7 +72,7 @@ class OrderDetails(models.Model):
 
 class ShoppCart(models.Model):
     idshoppcart = models.AutoField(primary_key=True)  #! los PK esperar a confirmar si se necesita o no 
-    iduser = models.ForeignKey(User, on_delete=models.CASCADE) #! arreglar/asociar con usuario 
+    # iduser = models.ForeignKey(User, on_delete=models.CASCADE) #! arreglar/asociar con usuario 
     def __str__(self):
         return str(self.idshoppcart)
 
@@ -89,7 +89,7 @@ class ShoppCartDetails(models.Model):
 class Reviews(models.Model):
     idreviews = models.AutoField(primary_key=True)  #! los PK esperar a confirmar si se necesita o no 
     idproduct = models.ForeignKey(Product, on_delete=models.CASCADE) #! arreglar/asociar con producto 
-    iduser = models.ForeignKey(User, on_delete=models.CASCADE) #! arreglar/asociar con usuario 
+    # iduser = models.ForeignKey(User, on_delete=models.CASCADE) #! arreglar/asociar con usuario 
     rating = models.IntegerField()
     comment = models.TextField()
     date = models.DateField(default=timezone.now)

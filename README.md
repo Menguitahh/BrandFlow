@@ -19,3 +19,45 @@ Este proyecto está centrado en ofrecer soluciones de branding que permitan a la
 - **Interfaz Intuitiva:** Interfaz de usuario amigable que permite a los usuarios sin experiencia en diseño crear una marca profesional y bien estructurada.
 - **Asesoría Personalizada:** Consultoría en línea con expertos en branding para guiar a tu empresa a través del proceso creativo y estratégico.
 - **Optimización Multicanal:** Herramientas para adaptar tu branding a diferentes plataformas y formatos, desde redes sociales hasta materiales impresos.
+
+
+## 🔗 Relaciones entre Modelos
+
+### 🧑 Usuario
+- Tiene un **Carrito** (relación uno a uno).
+- Puede realizar múltiples **Pedidos**.
+- Puede escribir múltiples **Reseñas**.
+
+### 🛒 Carrito
+- Pertenece a un **Usuario**.
+- Contiene múltiples **Detalle_Carrito**, cada uno asociado a un **Producto**.
+
+### 📦 Detalle_Carrito
+- Pertenece a un **Carrito**.
+- Está asociado a un único **Producto**.
+- Indica la **cantidad** de un producto en el carrito.
+
+### 🎨 Producto
+- Pertenece a una **Categoría**.
+- Puede estar en múltiples **Detalle_Carrito** y **Detalle_Pedido**.
+- Puede tener múltiples **Reseñas**.
+
+### 🗂️ Categoría
+- Contiene múltiples **Productos**.
+
+### 🧾 Pedido
+- Pertenece a un **Usuario**.
+- Contiene múltiples **Detalle_Pedido**.
+- Tiene un único **Pago** asociado.
+
+### 🧮 Detalle_Pedido
+- Pertenece a un **Pedido**.
+- Está asociado a un único **Producto**.
+- Indica la **cantidad** y el **precio unitario** del producto al momento del pedido.
+
+### 💳 Pago
+- Pertenece a un único **Pedido**.
+- Incluye detalles como el **método**, **estado** y **monto** del pago.
+
+### 📝 Reseña
+- Está asociada a un **Usuario** y a un **Producto**.

@@ -1,6 +1,7 @@
 from django.urls import path, include 
 from rest_framework import routers
 from brand_control import views
+from rest_framework.routers import DefaultRouter
 router = routers.DefaultRouter()
 # router.register(r'User', views.UserSerializerView, basename='User')
 router.register(r'Product', views.ProductSerializerView, basename='Product')

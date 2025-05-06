@@ -2,6 +2,8 @@ from django.shortcuts import render
 from rest_framework import viewsets
 from .serializer import *
 from .models import *
+from rest_framework import permissions, viewsets
+from user_control.permissions import IsAdminUserCustom
 
 # class UserSerializerView(viewsets.ModelViewSet):
 #     serializer_class = UserSerializer
@@ -11,6 +13,8 @@ from .models import *
 class ProductSerializerView(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
+    permission_classes = [permissions.IsAuthenticated, IsAdminUserCustom]
+
 
 class CategorySerializerView(viewsets.ModelViewSet):
     serializer_class = CategorySerializer

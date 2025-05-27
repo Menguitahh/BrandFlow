@@ -6,8 +6,8 @@ admin.site.register(Product)
 admin.site.register(Category)
 admin.site.register(Order)
 admin.site.register(OrderDetails)
-admin.site.register(ShoppCart)
-admin.site.register(ShoppCartDetails)
+admin.site.register(Shopp_Cart)
+admin.site.register(Shopp_Cart_Details)
 admin.site.register(Reviews)
 # admin.site.register(Payment) #! este va dependiendo los metodos de pago
 # admin.site.register(method_payment) #! este va dependiendo los metodos de pago

@@ -5,15 +5,16 @@ from brand_control import serializer as control_serializer
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
-    """Serializer para que un usuario se registre creando su propia compañía."""
+    """Serializer para que un usuario se registre creando su propia cuenta (sin company)."""
     password = serializers.CharField(write_only=True, required=True)
     password2 = serializers.CharField(write_only=True, required=True)
-    company = control_serializer.CategorySerializer(required=True)
-    role = serializers.HiddenField(default='admin')
+    roles = serializers.HiddenField(default='admin')
+    first_name = serializers.CharField(required=False)
+    last_name = serializers.CharField(required=False)
 
     class Meta:
         model = Users
-        fields = ['username', 'email', 'password', 'password2', 'name', 'role', 'company']
+        fields = ['username', 'email', 'password', 'password2', 'first_name', 'last_name', 'roles']
         extra_kwargs = {'email': {'required': True}}
 
     def validate(self, attrs):
@@ -23,20 +24,20 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password2')
-        company_data = validated_data.pop('company')
-        new_company = control_model.Company.objects.create(**company_data)
-        validated_data['role'] = 'admin'
-        return Users.objects.create_user(company=new_company, **validated_data)
+        validated_data['roles'] = 'admin'
+        return Users.objects.create_user(**validated_data)
 
 
 class UserCreateByAdminSerializer(serializers.ModelSerializer):
-    """Serializer para que un admin cree usuarios dentro de su empresa."""
+    """Serializer para que un admin cree usuarios dentro de su empresa (sin company)."""
     password = serializers.CharField(write_only=True)
     password2 = serializers.CharField(write_only=True)
+    first_name = serializers.CharField(required=False)
+    last_name = serializers.CharField(required=False)
 
     class Meta:
         model = Users
-        fields = ['username', 'email', 'password', 'password2', 'name', 'role', 'branch']
+        fields = ['username', 'email', 'password', 'password2', 'first_name', 'last_name', 'roles', 'branch']
         extra_kwargs = {'email': {'required': True}}
 
     def __init__(self, *args, **kwargs):
@@ -52,8 +53,7 @@ class UserCreateByAdminSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password2')
-        company = self.context['request'].user.company
-        return Users.objects.create_user(company=company, **validated_data)
+        return Users.objects.create_user(**validated_data)
 
 
 class BranchCreateByAdminSerializer(serializers.ModelSerializer):
@@ -64,5 +64,5 @@ class BranchCreateByAdminSerializer(serializers.ModelSerializer):
         fields = ['name', 'address', 'phone']
 
     def create(self, validated_data):
-        company = self.context['request'].users.company
+        company = self.context['request'].user.company
         return control_model.Branch.objects.create(company=company, **validated_data)

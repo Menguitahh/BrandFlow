@@ -46,7 +46,7 @@ class LoginView(APIView):
             login(request, user)
             return Response({
                 "email": user.email,
-                "role": user.role,
+                "roles": user.roles,
             }, status=status.HTTP_200_OK)
 
         return Response({"error": "Credenciales incorrectas"}, status=status.HTTP_400_BAD_REQUEST)
@@ -68,7 +68,7 @@ class CreateUserByAdminView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if user.role != 'admin':
+        if user.roles != 'admin':
             raise permissions.PermissionDenied("No tienes permiso para crear usuarios.")
         serializer.save(company=user.company)
 
@@ -80,6 +80,6 @@ class CreateBranchByAdminView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if user.role != 'admin':
+        if user.roles != 'admin':
             raise permissions.PermissionDenied("Solo los administradores pueden crear sucursales.")
         serializer.save()

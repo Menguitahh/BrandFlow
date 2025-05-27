@@ -3,9 +3,8 @@ import requests
 url = 'http://127.0.0.1:8000/api/user/login/'
 
 data = {
-    'username': 'Menga_Admin',
-    'password': 'Peritomoreno434',
-    'roles': 'cliente',
+    'identifier': 'juanperez92',
+    'password': 'ClaveFuerte456!',
 }
 
 response = requests.post(url, json=data)

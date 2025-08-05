@@ -9,6 +9,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('login/', views.LoginView.as_view(), name='login'),
     path('logout/', views.LogoutView.as_view(), name='logout'),
+    path('protected/', views.ProtectedView.as_view(), name='protected'),
     path('admin/create-user/', views.CreateUserByAdminView.as_view(), name='admin-create-user'),
     path('admin/create-branch/', views.CreateBranchByAdminView.as_view(), name='admin-create-branch'),
 ]

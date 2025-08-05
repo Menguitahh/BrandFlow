@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework import routers
 from brand_control import views
 from rest_framework.routers import DefaultRouter
+
 router = routers.DefaultRouter()
 # router.register(r'User', views.UserSerializerView, basename='User')
 router.register(r'Product', views.ProductSerializerView, basename='Product')
@@ -13,9 +14,9 @@ router.register(r'shoppcart', views.ShoppCartSerializerView, basename='shoppcart
 router.register(r'shoppcartdetails', views.ShoppCartDetailsSerializerView, basename='shoppcartdetails') 
 # router.register(r'method_payment', views.method_paymentSerializerView, basename='method_payment')
 router.register(r'Reviews', views.ReviewsSerializerView, basename='Reviews')
-
+router.register(r'Branch', views.BranchSerializerView, basename='Branch')
+router.register(r'StockMovement', views.StockMovementViewSet, basename='StockMovement')
 
 urlpatterns = [
     path('brand_control/model/', include(router.urls)),
-    
 ]

@@ -28,17 +28,15 @@ class OrderDetailsSerializerView(viewsets.ModelViewSet):
     serializer_class = OrderDetailsSerializer
     queryset = OrderDetails.objects.all()
 
-class Shopp_CartSerializerView(viewsets.ModelViewSet):
-    serializer_class = Shopp_CartSerializer
-    queryset = Shopp_Cart.objects.all()
+class ShoppCartSerializerView(viewsets.ModelViewSet):
+    serializer_class = ShoppCartSerializer
+    queryset = ShoppCart.objects.all()
 
-class Shopp_Cart_DetailsSerializerView(viewsets.ModelViewSet):
-    serializer_class = Shopp_Cart_DetailsSerializer
-    queryset = Shopp_Cart_Details.objects.all()
+class ShoppCartDetailsSerializerView(viewsets.ModelViewSet):
+    serializer_class = ShoppCartDetailsSerializer
+    queryset = ShoppCartDetails.objects.all()
 
 class ReviewsSerializerView(viewsets.ModelViewSet):
     serializer_class = ReviewsSerializer
     queryset = Reviews.objects.all()
-    
-
 

@@ -31,8 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'brand_control',
-    'user_control',
+    'BrandApp',
     'rest_framework',
     'corsheaders',
     'django.contrib.admin',
@@ -78,9 +77,6 @@ WSGI_APPLICATION = 'BrandFlow.wsgi.application'
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-    ],
 }
 
 # Database
@@ -99,16 +95,6 @@ DATABASES = {
         },
     }
 }
-
-# Configuración para pruebas
-import sys
-if 'test' in sys.argv:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',
-        }
-    }
 
 
 # Password validation
@@ -152,4 +138,3 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = []
-AUTH_USER_MODEL = 'user_control.Users'

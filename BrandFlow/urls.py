@@ -21,8 +21,7 @@ from django.urls import path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('brand_control.urls')),
-    path('api/user/', include('user_control.urls')),
+    path('api/', include('BrandApp.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]

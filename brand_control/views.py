@@ -13,7 +13,7 @@ from user_control.permissions import IsAdminUserCustom
 class ProductSerializerView(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
-    permission_classes = [permissions.IsAuthenticated, IsAdminUserCustom]
+    permission_classes = [permissions.IsAuthenticated]  # Cambiado para permitir usuarios autenticados
 
 
 class CategorySerializerView(viewsets.ModelViewSet):
@@ -23,6 +23,7 @@ class CategorySerializerView(viewsets.ModelViewSet):
 class OrderSerializerView(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
+    permission_classes = [permissions.IsAuthenticated]  # Agregado para usuarios autenticados
 
 class OrderDetailsSerializerView(viewsets.ModelViewSet):
     serializer_class = OrderDetailsSerializer
@@ -31,10 +32,12 @@ class OrderDetailsSerializerView(viewsets.ModelViewSet):
 class ShoppCartSerializerView(viewsets.ModelViewSet):
     serializer_class = ShoppCartSerializer
     queryset = ShoppCart.objects.all()
+    permission_classes = [permissions.IsAuthenticated]  # Agregado para usuarios autenticados
 
 class ShoppCartDetailsSerializerView(viewsets.ModelViewSet):
     serializer_class = ShoppCartDetailsSerializer
     queryset = ShoppCartDetails.objects.all()
+    permission_classes = [permissions.IsAuthenticated]  # Agregado para usuarios autenticados
 
 class ReviewsSerializerView(viewsets.ModelViewSet):
     serializer_class = ReviewsSerializer

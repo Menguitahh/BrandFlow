@@ -1,5 +1,5 @@
 from rest_framework.permissions import BasePermission
-
+from user_control.models import Users
 class IsAdminUserCustom(BasePermission):
     """Permiso personalizado para verificar si el usuario es administrador"""
     
@@ -46,3 +46,14 @@ class IsCompanyMember(BasePermission):
             return obj.company == request.user.company
         
         return False
+    
+    
+
+class IsClientUser(BasePermission):
+    """Permiso para verificar si el usuario es cliente"""
+    
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.is_client
+    
+    def has_object_permission(self, request, view, obj):
+        return request.user.is_authenticated and request.user.is_client

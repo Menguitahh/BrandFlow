@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class BrandappConfig(AppConfig):
+class BrandControlConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'BrandApp'
+    name = 'brand_control'

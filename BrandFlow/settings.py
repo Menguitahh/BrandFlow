@@ -208,3 +208,39 @@ if 'test' in sys.argv:
             'NAME': ':memory:',
         }
     }
+
+# Configuración de Swagger/Spectacular
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'BrandFlow API',
+    'DESCRIPTION': 'API para gestión de branding y productos',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/',
+    'CONTACT': {
+        'name': 'BrandFlow Team',
+        'email': 'contact@brandflow.com',
+    },
+    'LICENSE': {
+        'name': 'MIT License',
+        'url': 'https://opensource.org/licenses/MIT',
+    },
+    'TAGS': [
+        {'name': 'authentication', 'description': 'Endpoints de autenticación y gestión de usuarios'},
+        {'name': 'users', 'description': 'Gestión de usuarios y perfiles'},
+        {'name': 'products', 'description': 'Gestión de productos y categorías'},
+        {'name': 'orders', 'description': 'Gestión de pedidos y carritos'},
+        {'name': 'payments', 'description': 'Gestión de pagos'},
+        {'name': 'reviews', 'description': 'Gestión de reseñas'},
+        {'name': 'branches', 'description': 'Gestión de sucursales'},
+        {'name': 'stock', 'description': 'Control de inventario'},
+    ],
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+    },
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
+}

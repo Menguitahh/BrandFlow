@@ -61,6 +61,19 @@ class LogoutView(APIView):
         return Response({"message": "Logout exitoso"}, status=status.HTTP_200_OK)
 
 
+class ProtectedView(APIView):
+    """Vista protegida con JWT para probar autenticación"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            'message': f'¡Hola, {request.user.username}! Estás autenticado con JWT.',
+            'user_id': request.user.id,
+            'email': request.user.email,
+            'roles': request.user.roles
+        })
+
+
 class CreateUserByAdminView(generics.CreateAPIView):
     """Vista para que un admin cree usuarios"""
     serializer_class = UserCreateByAdminSerializer

@@ -7,6 +7,8 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 from .models import Users
 from .serializer import (
@@ -20,6 +22,33 @@ from .permissions import IsAdminUserCustom
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+@extend_schema(
+    tags=['authentication'],
+    summary='Registro de usuario',
+    description='Permite a un usuario crear su propia cuenta en el sistema',
+    request=UserRegisterSerializer,
+    responses={
+        201: UserDetailSerializer,
+        400: {'type': 'object', 'properties': {'error': {'type': 'string'}}},
+    },
+    examples=[
+        OpenApiExample(
+            'Registro exitoso',
+            value={
+                'username': 'nuevo_usuario',
+                'email': 'usuario@example.com',
+                'password': 'Password123!',
+                'password2': 'Password123!',
+                'first_name': 'Juan',
+                'last_name': 'Pérez',
+                'phone': '123456789',
+                'address': 'Calle Principal 123',
+                'roles': 'cliente'
+            },
+            request_only=True,
+        ),
+    ],
+)
 class UserRegisterView(viewsets.ModelViewSet):
     """Vista para registro de usuario creando su propia cuenta"""
     serializer_class = UserRegisterSerializer
@@ -29,6 +58,43 @@ class UserRegisterView(viewsets.ModelViewSet):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+@extend_schema(
+    tags=['authentication'],
+    summary='Inicio de sesión',
+    description='Permite a un usuario iniciar sesión usando username o email',
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'identifier': {'type': 'string', 'description': 'Username o email del usuario'},
+                'password': {'type': 'string', 'description': 'Contraseña del usuario'},
+            },
+            'required': ['identifier', 'password'],
+        }
+    },
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'message': {'type': 'string'},
+                'user': UserDetailSerializer,
+                'session_id': {'type': 'string'},
+            }
+        },
+        400: {'type': 'object', 'properties': {'error': {'type': 'string'}}},
+        500: {'type': 'object', 'properties': {'error': {'type': 'string'}}},
+    },
+    examples=[
+        OpenApiExample(
+            'Login exitoso',
+            value={
+                'identifier': 'usuario@example.com',
+                'password': 'Password123!'
+            },
+            request_only=True,
+        ),
+    ],
+)
 class LoginView(APIView):
     """Vista de login por username o email con manejo de sesiones"""
     permission_classes = [AllowAny]
@@ -85,6 +151,20 @@ class LoginView(APIView):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+@extend_schema(
+    tags=['authentication'],
+    summary='Cerrar sesión',
+    description='Cierra la sesión del usuario actual',
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'message': {'type': 'string'},
+                'session_cleared': {'type': 'boolean'},
+            }
+        },
+    },
+)
 class LogoutView(APIView):
     """Vista para cerrar sesión"""
     permission_classes = [AllowAny]
@@ -97,8 +177,17 @@ class LogoutView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    tags=['users'],
+    summary='Obtener perfil de usuario',
+    description='Obtiene la información del perfil del usuario autenticado',
+    responses={
+        200: UserDetailSerializer,
+        401: {'type': 'object', 'properties': {'detail': {'type': 'string'}}},
+    },
+)
 class UserProfileView(APIView):
-    """Vista para obtener y actualizar perfil del usuario"""
+    """Vista para obtener y actualizar el perfil del usuario"""
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
@@ -151,6 +240,17 @@ class ProtectedView(APIView):
         })
 
 
+@extend_schema(
+    tags=['users'],
+    summary='Crear usuario (Admin)',
+    description='Permite a un administrador crear nuevos usuarios en el sistema',
+    request=UserCreateByAdminSerializer,
+    responses={
+        201: UserDetailSerializer,
+        400: {'type': 'object', 'properties': {'error': {'type': 'string'}}},
+        403: {'type': 'object', 'properties': {'detail': {'type': 'string'}}},
+    },
+)
 class CreateUserByAdminView(generics.CreateAPIView):
     """Vista para que un admin cree usuarios"""
     serializer_class = UserCreateByAdminSerializer
@@ -163,6 +263,17 @@ class CreateUserByAdminView(generics.CreateAPIView):
         serializer.save()
 
 
+@extend_schema(
+    tags=['branches'],
+    summary='Crear sucursal (Admin)',
+    description='Permite a un administrador crear nuevas sucursales',
+    request=BranchCreateByAdminSerializer,
+    responses={
+        201: BranchCreateByAdminSerializer,
+        400: {'type': 'object', 'properties': {'error': {'type': 'string'}}},
+        403: {'type': 'object', 'properties': {'detail': {'type': 'string'}}},
+    },
+)
 class CreateBranchByAdminView(generics.CreateAPIView):
     """Vista para que un admin cree sucursales"""
     serializer_class = BranchCreateByAdminSerializer

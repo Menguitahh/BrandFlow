@@ -9,6 +9,7 @@ class Users(AbstractUser):
     roles = models.CharField(max_length=50, default='cliente', choices=[
         ('admin', 'Administrador'),
         ('cliente', 'Cliente'),
+        ('diseñador', 'Diseñador'),
         ('vendedor', 'Vendedor'),
         ('gerente', 'Gerente'),
     ])
@@ -28,19 +29,30 @@ class Users(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.roles})"
     
+    # Helpers como propiedades (compatibilidad con tests)
     @property
     def is_admin(self):
         return self.roles == 'admin'
-    
+
+    @property
+    def is_designer(self):
+        return self.roles == 'diseñador'
+
     @property
     def is_client(self):
         return self.roles == 'cliente'
-    
-    @property
-    def is_seller(self):
-        return self.roles == 'vendedor'
-    
+
     @property
     def is_manager(self):
         return self.roles == 'gerente'
+
+    # Propiedades para compatibilidad con código existente
+    @property
+    def is_seller(self):
+        return self.roles == 'vendedor'
+
+    # Alias esperado por tests
+    @property
+    def is_vendor(self):
+        return self.roles == 'vendedor'
     

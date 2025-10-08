@@ -103,7 +103,7 @@ class UserManagementTestCase(APITestCase):
         self.assertEqual(new_user.roles, 'cliente')
         self.assertTrue(new_user.check_password('NewUser123!'))
         
-        print("✅ Registro de usuario exitoso")
+        print("Registro de usuario exitoso")
     
     def test_user_registration_validation(self):
         """Prueba validaciones en el registro de usuarios"""
@@ -126,14 +126,17 @@ class UserManagementTestCase(APITestCase):
         print(f"Respuesta con contraseñas diferentes: {response.status_code}")
         self.assertNotEqual(response.status_code, status.HTTP_201_CREATED)
         
-        # Prueba 2: Usuario ya existe
+        # Prueba 2: Usuario ya existe (usar username del setUp)
+        user_data['username'] = 'admin'  # Usuario que ya existe en setUp
+        user_data['email'] = 'admin@example.com'  # Email que ya existe en setUp
         user_data['password2'] = 'Password123!'
         response = self.client.post(url, user_data, format='json')
         
         print(f"Respuesta con usuario existente: {response.status_code}")
+        print(f"Contenido de la respuesta: {response.data}")
         self.assertNotEqual(response.status_code, status.HTTP_201_CREATED)
         
-        print("✅ Validaciones de registro funcionando")
+        print("Validaciones de registro funcionando")
     
     def test_user_login_success(self):
         """Prueba login exitoso de usuario"""
@@ -164,7 +167,7 @@ class UserManagementTestCase(APITestCase):
         self.assertEqual(user_data['email'], 'client@example.com')
         self.assertEqual(user_data['roles'], 'cliente')
         
-        print("✅ Login exitoso")
+        print("Login exitoso")
     
     def test_user_login_by_email(self):
         """Prueba login usando email"""
@@ -185,7 +188,7 @@ class UserManagementTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['user']['email'], 'client@example.com')
         
-        print("✅ Login por email exitoso")
+        print("Login por email exitoso")
     
     def test_user_login_invalid_credentials(self):
         """Prueba login con credenciales inválidas"""
@@ -214,7 +217,7 @@ class UserManagementTestCase(APITestCase):
         print(f"Respuesta con usuario inexistente: {response.status_code}")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         
-        print("✅ Validaciones de login funcionando")
+        print("Validaciones de login funcionando")
     
     def test_user_logout(self):
         """Prueba logout de usuario"""
@@ -235,7 +238,7 @@ class UserManagementTestCase(APITestCase):
         self.assertIn('message', response.data)
         self.assertIn('session_cleared', response.data)
         
-        print("✅ Logout exitoso")
+        print("Logout exitoso")
     
     def test_user_profile_get(self):
         """Prueba obtener perfil de usuario"""
@@ -257,7 +260,7 @@ class UserManagementTestCase(APITestCase):
         self.assertEqual(response.data['email'], 'client@example.com')
         self.assertEqual(response.data['roles'], 'cliente')
         
-        print("✅ Obtención de perfil exitosa")
+        print("Obtención de perfil exitosa")
     
     def test_user_profile_update(self):
         """Prueba actualizar perfil de usuario"""
@@ -292,7 +295,7 @@ class UserManagementTestCase(APITestCase):
         self.assertEqual(updated_user.last_name, 'Name')
         self.assertEqual(updated_user.phone, '555123456')
         
-        print("✅ Actualización de perfil exitosa")
+        print("Actualización de perfil exitosa")
     
     def test_session_status(self):
         """Prueba estado de sesión"""
@@ -315,7 +318,7 @@ class UserManagementTestCase(APITestCase):
         self.assertTrue(response.data['authenticated'])
         self.assertIn('user', response.data)
         
-        print("✅ Verificación de estado de sesión exitosa")
+        print("Verificación de estado de sesión exitosa")
     
     def test_admin_create_user(self):
         """Prueba creación de usuario por admin"""
@@ -352,7 +355,7 @@ class UserManagementTestCase(APITestCase):
         self.assertEqual(new_user.roles, 'vendedor')
         self.assertEqual(new_user.company, self.admin_user)
         
-        print("✅ Creación de usuario por admin exitosa")
+        print("Creación de usuario por admin exitosa")
     
     def test_user_roles_and_permissions(self):
         """Prueba roles y permisos de usuario"""
@@ -387,7 +390,7 @@ class UserManagementTestCase(APITestCase):
         # Debería ser 403 (Forbidden) porque solo admins pueden crear productos
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         
-        print("✅ Roles y permisos funcionando correctamente")
+        print("Roles y permisos funcionando correctamente")
     
     def test_user_company_relationship(self):
         """Prueba relación empresa-empleado"""
@@ -408,7 +411,7 @@ class UserManagementTestCase(APITestCase):
         self.assertEqual(employee.company, self.admin_user)
         self.assertIn(employee, self.admin_user.employees.all())
         
-        print("✅ Relación empresa-empleado funcionando")
+        print("Relación empresa-empleado funcionando")
     
     def test_user_authentication_flow(self):
         """Prueba flujo completo de autenticación"""
@@ -430,7 +433,7 @@ class UserManagementTestCase(APITestCase):
         url_register = reverse('user_control:register')
         response_register = self.client.post(url_register, user_data, format='json')
         self.assertEqual(response_register.status_code, status.HTTP_201_CREATED)
-        print("1. ✅ Usuario registrado")
+        print("1. Usuario registrado")
         
         # 2. Login del usuario
         login_data = {
@@ -441,29 +444,29 @@ class UserManagementTestCase(APITestCase):
         url_login = reverse('user_control:login')
         response_login = self.client.post(url_login, login_data, format='json')
         self.assertEqual(response_login.status_code, status.HTTP_200_OK)
-        print("2. ✅ Usuario logueado")
+        print("2. Usuario logueado")
         
         # 3. Verificar estado de sesión
         url_status = reverse('user_control:session-status')
         response_status = self.client.get(url_status)
         self.assertEqual(response_status.status_code, status.HTTP_200_OK)
         self.assertTrue(response_status.data['authenticated'])
-        print("3. ✅ Estado de sesión verificado")
+        print("3. Estado de sesión verificado")
         
         # 4. Obtener perfil
         url_profile = reverse('user_control:profile')
         response_profile = self.client.get(url_profile)
         self.assertEqual(response_profile.status_code, status.HTTP_200_OK)
         self.assertEqual(response_profile.data['username'], 'flowuser')
-        print("4. ✅ Perfil obtenido")
+        print("4. Perfil obtenido")
         
         # 5. Logout
         url_logout = reverse('user_control:logout')
         response_logout = self.client.post(url_logout)
         self.assertEqual(response_logout.status_code, status.HTTP_200_OK)
-        print("5. ✅ Usuario deslogueado")
+        print("5. Usuario deslogueado")
         
-        print("✅ Flujo completo de autenticación exitoso")
+        print("Flujo completo de autenticación exitoso")
 
 
 if __name__ == '__main__':

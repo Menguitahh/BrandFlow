@@ -132,7 +132,13 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = []
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+]
+CORS_ALLOW_CREDENTIALS = True
 AUTH_USER_MODEL = 'user_control.Users'
 
 # DRF settings para desarrollo
@@ -208,11 +214,15 @@ if 'test' in sys.argv:
             'NAME': ':memory:',
         }
     }
+    # Deshabilitar migraciones problemáticas en tests (crea tablas desde los modelos)
+    MIGRATION_MODULES = {
+        'brand_control': None,
+    }
 
 # Configuración de Swagger/Spectacular
 SPECTACULAR_SETTINGS = {
     'TITLE': 'BrandFlow API',
-    'DESCRIPTION': 'API para gestión de branding y productos',
+    'DESCRIPTION': 'API para gestión de branding: servicios, cotizaciones, proyectos, pagos y chat',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
@@ -228,12 +238,11 @@ SPECTACULAR_SETTINGS = {
     'TAGS': [
         {'name': 'authentication', 'description': 'Endpoints de autenticación y gestión de usuarios'},
         {'name': 'users', 'description': 'Gestión de usuarios y perfiles'},
-        {'name': 'products', 'description': 'Gestión de productos y categorías'},
-        {'name': 'orders', 'description': 'Gestión de pedidos y carritos'},
-        {'name': 'payments', 'description': 'Gestión de pagos'},
-        {'name': 'reviews', 'description': 'Gestión de reseñas'},
-        {'name': 'branches', 'description': 'Gestión de sucursales'},
-        {'name': 'stock', 'description': 'Control de inventario'},
+        {'name': 'branding-services', 'description': 'Servicios y categorías de branding'},
+        {'name': 'branding-quotes', 'description': 'Solicitudes de cotización'},
+        {'name': 'branding-projects', 'description': 'Proyectos y seguimiento'},
+        {'name': 'branding-messages', 'description': 'Mensajes por proyecto (chat)'},
+        {'name': 'branding-payments', 'description': 'Pagos simulados'},
     ],
     'SWAGGER_UI_SETTINGS': {
         'deepLinking': True,

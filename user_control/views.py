@@ -18,7 +18,7 @@ from .serializer import (
     UserDetailSerializer,
     UserUpdateSerializer,
 )
-from .permissions import IsAdminUserCustom
+from .permissions import IsAdminUserCustom, IsAdmin
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -55,6 +55,24 @@ class UserRegisterView(viewsets.ModelViewSet):
     queryset = Users.objects.all()
     http_method_names = ['post']  # Solo permitimos POST para registrar
     permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        # Usamos el serializer de registro pero respondemos con UserDetailSerializer
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        
+        # Login automático después del registro para establecer sesión
+        login(request, user)
+        
+        detail = UserDetailSerializer(user, context={'request': request})
+        headers = self.get_success_headers(detail.data)
+        
+        return Response({
+            "message": "Usuario registrado e iniciado sesión exitosamente",
+            "user": detail.data,
+            "session_id": request.session.session_key,
+        }, status=status.HTTP_201_CREATED, headers=headers)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -284,6 +302,139 @@ class CreateBranchByAdminView(generics.CreateAPIView):
         if not user.is_admin:
             raise permissions.PermissionDenied("Solo los administradores pueden crear sucursales.")
         serializer.save()
+
+
+@extend_schema(
+    tags=['admin'],
+    summary='Listar todos los usuarios (Admin)',
+    description='Permite a un admin ver todos los usuarios con filtros por rol',
+    parameters=[
+        OpenApiParameter(name='role', description='Filtrar por rol', required=False, type=str),
+        OpenApiParameter(name='search', description='Buscar por nombre o email', required=False, type=str),
+    ],
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'users': {
+                    'type': 'array',
+                    'items': UserDetailSerializer
+                },
+                'total': {'type': 'integer'},
+                'filters': {'type': 'object'}
+            }
+        }
+    }
+)
+class AdminUserListView(APIView):
+    """Vista para que admin liste todos los usuarios con filtros"""
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        # Obtener parámetros de filtro
+        role_filter = request.query_params.get('role')
+        search_query = request.query_params.get('search', '')
+        
+        # Query base
+        queryset = Users.objects.all().order_by('-date_joined')
+        
+        # Aplicar filtros
+        if role_filter:
+            queryset = queryset.filter(roles=role_filter)
+        
+        if search_query:
+            queryset = queryset.filter(
+                Q(username__icontains=search_query) |
+                Q(email__icontains=search_query) |
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query)
+            )
+        
+        # Serializar usuarios
+        serializer = UserDetailSerializer(queryset, many=True)
+        
+        return Response({
+            'users': serializer.data,
+            'total': queryset.count(),
+            'filters': {
+                'role': role_filter,
+                'search': search_query
+            }
+        })
+
+
+@extend_schema(
+    tags=['admin'],
+    summary='Listar diseñadores disponibles (Admin)',
+    description='Obtiene lista de usuarios con rol diseñador para asignación de proyectos',
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'designers': {
+                    'type': 'array',
+                    'items': UserDetailSerializer
+                },
+                'total': {'type': 'integer'}
+            }
+        }
+    }
+)
+class AdminDesignersListView(APIView):
+    """Vista para que admin obtenga lista de diseñadores disponibles"""
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        # Obtener solo usuarios con rol diseñador
+        designers = Users.objects.filter(roles='diseñador').order_by('username')
+        serializer = UserDetailSerializer(designers, many=True)
+        
+        return Response({
+            'designers': serializer.data,
+            'total': designers.count()
+        })
+
+
+@extend_schema(
+    tags=['admin'],
+    summary='Cambiar rol de usuario (Admin)',
+    description='Permite a un admin asignar rol a un usuario: diseñador, cliente, gerente, vendedor o admin',
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'user_id': {'type': 'integer'},
+                'role': {'type': 'string', 'enum': ['diseñador', 'cliente', 'gerente', 'vendedor', 'admin']},
+            },
+            'required': ['user_id', 'role']
+        }
+    },
+)
+class AdminSetRoleView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        role = request.data.get('role')
+        if not user_id or not role:
+            return Response({"detail": "user_id y role son requeridos"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if role not in ['diseñador', 'cliente', 'gerente', 'vendedor', 'admin']:
+            return Response({"detail": "Rol inválido"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            target = Users.objects.get(id=user_id)
+        except Users.DoesNotExist:
+            return Response({"detail": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Evitar que un no-admin cambie su propio rol (ya cubierto por permiso),
+        # adicionalmente impedir auto-escalado si no fuera admin
+        if target.id == request.user.id and not (hasattr(request.user, 'is_admin') and request.user.is_admin()):
+            return Response({"detail": "No autorizado"}, status=status.HTTP_403_FORBIDDEN)
+
+        target.roles = role
+        target.save()
+        return Response(UserDetailSerializer(target).data, status=status.HTTP_200_OK)
 
 
 @method_decorator(csrf_exempt, name='dispatch')

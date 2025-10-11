@@ -13,6 +13,21 @@ django.setup()
 
 from django.test import TestCase
 from rest_framework.test import APIClient
+from user_control.models import Users
+
+
+class RegistrationTests(TestCase):
+    def setUp(self):
+        self.api = APIClient()
+
+    def test_register_default_role_client(self):
+        r = self.api.post('/api/user/register/', {
+            'username': 'c1', 'email': 'c1@example.com', 'password': 'Test123!', 'password2': 'Test123!', 'roles': 'admin'
+        }, format='json')
+        self.assertEqual(r.status_code, 201)
+        u = Users.objects.get(username='c1')
+        self.assertEqual(u.roles, 'cliente')
+from rest_framework.test import APIClient
 from rest_framework import status
 from user_control.models import Users
 from brand_control.models import Category, Product, Order, ShoppCart

@@ -14,6 +14,69 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'BrandFlow.settings')
 django.setup()
 
 from django.test import TestCase
+from rest_framework.test import APIClient
+from user_control.models import Users
+from brand_control.models import ServiceCategory, Service, Project
+
+
+class FlowTests(TestCase):
+    def setUp(self):
+        self.client_api = APIClient()
+        self.admin = Users.objects.create_user(username='admin', email='admin@example.com', password='Admin123!', roles='admin')
+        self.client_user = Users.objects.create_user(username='cli', email='cli@example.com', password='Test123!', roles='cliente')
+        self.designer = Users.objects.create_user(username='des', email='des@example.com', password='Test123!', roles='diseñador')
+        cat = ServiceCategory.objects.create(name='Diseño')
+        self.service = Service.objects.create(category=cat, name='Logo', base_price=100)
+
+    def test_register_forces_client_role(self):
+        resp = self.client_api.post('/api/user/register/', {
+            'username': 'nuevo', 'email': 'n@example.com', 'password': 'Test123!', 'password2': 'Test123!', 'roles': 'admin'
+        }, format='json')
+        self.assertEqual(resp.status_code, 201)
+        u = Users.objects.get(username='nuevo')
+        self.assertEqual(u.roles, 'cliente')
+
+    def test_quote_to_payment_flow(self):
+        # login client via JWT obtain pair is not used; we use session auth for tests
+        self.client_api.force_authenticate(user=self.client_user)
+        # create quote
+        r = self.client_api.post('/api/branding/quotes/', {
+            'service': self.service.id,
+            'title': 'Logo para marca',
+            'description': 'Minimalista',
+            'budget': '150.00'
+        }, format='json')
+        self.assertEqual(r.status_code, 201)
+        quote_id = r.data['id']
+
+        # approve as admin
+        self.client_api.force_authenticate(user=self.admin)
+        r2 = self.client_api.post(f'/api/branding/quotes/{quote_id}/approve/', {
+            'price': '180.00',
+            'assigned_to': self.designer.id
+        }, format='json')
+        self.assertEqual(r2.status_code, 200)
+        project_id = r2.data['project']['id']
+
+        # simulate payment as client
+        self.client_api.force_authenticate(user=self.client_user)
+        r3 = self.client_api.post('/api/branding/payments/simulate/', {
+            'project_id': project_id, 'amount': '180.00', 'cardholder_name': 'Cli', 'card_last4': '4242'
+        }, format='json')
+        self.assertEqual(r3.status_code, 201)
+        self.assertEqual(r3.data['project']['status'], 'in_progress')
+
+    def test_project_chat_permissions(self):
+        # create project
+        p = Project.objects.create(title='P', client=self.client_user, service=self.service, total_price=100, status='payment_pending', assigned_to=self.designer)
+        # client can post
+        self.client_api.force_authenticate(user=self.client_user)
+        r1 = self.client_api.post('/api/branding/projects/messages/', {'project': p.id, 'message': 'hola'}, format='json')
+        self.assertEqual(r1.status_code, 201)
+        # designer can list
+        self.client_api.force_authenticate(user=self.designer)
+        r2 = self.client_api.get('/api/branding/projects/messages/', {'project': p.id})
+        self.assertEqual(r2.status_code, 200)
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status

@@ -4,6 +4,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from django.db.models import Q
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 from .serializer import (
     ProductSerializer, CategorySerializer, OrderSerializer, OrderDetailsSerializer,
@@ -63,6 +65,7 @@ class ReviewsSerializerView(viewsets.ModelViewSet):
     serializer_class = ReviewsSerializer
     queryset = Reviews.objects.all()
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ServiceCategoryViewSet(viewsets.ModelViewSet):
     queryset = ServiceCategory.objects.all()
     serializer_class = ServiceCategorySerializer
@@ -72,6 +75,7 @@ class ServiceCategoryViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), IsAdminUserCustom()]
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ServiceViewSet(viewsets.ModelViewSet):
     queryset = Service.objects.all()
     serializer_class = ServiceSerializer
@@ -81,6 +85,7 @@ class ServiceViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), IsAdminUserCustom()]
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class QuoteRequestViewSet(viewsets.ModelViewSet):
     queryset = QuoteRequest.objects.select_related('client', 'service').all()
     serializer_class = QuoteRequestSerializer
@@ -89,7 +94,7 @@ class QuoteRequestViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         # Admin ve todas; cliente solo propias; diseñador opcionalmente ninguna
-        if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
+        if hasattr(user, 'is_admin') and user.is_admin:
             return self.queryset
         return self.queryset.filter(client=user)
 
@@ -149,6 +154,7 @@ class QuoteRequestViewSet(viewsets.ModelViewSet):
         return Response(QuoteRequestSerializer(quote).data)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.select_related('client', 'assigned_to', 'service').all()
     serializer_class = ProjectSerializer
@@ -156,17 +162,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
-            return self.queryset
-        if hasattr(user, 'is_designer') and user.is_designer():
-            return self.queryset.filter(assigned_to=user)
+        # Siempre obtener datos frescos de la base de datos
+        fresh_queryset = Project.objects.select_related('client', 'assigned_to', 'service').all()
+        
+        if hasattr(user, 'is_admin') and user.is_admin:
+            return fresh_queryset
+        if hasattr(user, 'is_designer') and user.is_designer:
+            return fresh_queryset.filter(assigned_to=user)
         # cliente
-        return self.queryset.filter(client=user)
+        return fresh_queryset.filter(client=user)
 
     def perform_create(self, serializer):
         # Si un cliente crea proyecto directo, forzar status='quote'
         user = self.request.user
-        if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
+        if hasattr(user, 'is_admin') and user.is_admin:
             serializer.save(client=user)
         else:
             serializer.save(client=user, status='quote')
@@ -184,7 +193,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
         
         # Verificar que el usuario sea un diseñador
-        if not designer.is_designer():
+        if not designer.is_designer:
             return Response({'detail': 'El usuario debe tener rol de diseñador'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Asignar diseñador y actualizar estado del proyecto
@@ -200,6 +209,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         })
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ProjectMessageViewSet(viewsets.ModelViewSet):
     queryset = ProjectMessage.objects.select_related('project', 'sender').all()
     serializer_class = ProjectMessageSerializer
@@ -212,7 +222,7 @@ class ProjectMessageViewSet(viewsets.ModelViewSet):
         project_id = self.request.query_params.get('project')
         if project_id:
             qs = qs.filter(project_id=project_id)
-        if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
+        if hasattr(user, 'is_admin') and user.is_admin:
             return qs
         # filtrar por participación
         return qs.filter(Q(project__client=user) | Q(project__assigned_to=user))
@@ -227,6 +237,7 @@ class ProjectMessageViewSet(viewsets.ModelViewSet):
         serializer.save(sender=user)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.select_related('project').all()
     serializer_class = PaymentSerializer
@@ -234,10 +245,10 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
+        if hasattr(user, 'is_admin') and user.is_admin:
             return self.queryset
         # diseñador: pagos de asignados; cliente: de sus proyectos
-        if hasattr(user, 'is_designer') and user.is_designer():
+        if hasattr(user, 'is_designer') and user.is_designer:
             return self.queryset.filter(project__assigned_to=user)
         return self.queryset.filter(project__client=user)
 

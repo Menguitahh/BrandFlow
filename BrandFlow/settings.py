@@ -55,6 +55,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'user_control.middleware.SessionMiddleware',  # Middleware personalizado para sesiones
     'user_control.middleware.CSRFMiddleware',  # Middleware personalizado para CSRF
+    'BrandFlow.middleware.DisableCSRFMiddleware',  # Deshabilitar CSRF en APIs
 ]
 
 ROOT_URLCONF = 'BrandFlow.urls'
@@ -204,6 +205,19 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 # Configuración de sesiones
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_SAVE_EVERY_REQUEST = True
+
+# Deshabilitar CSRF para APIs REST (solo para desarrollo)
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+# Middleware personalizado para deshabilitar CSRF en APIs
+MIDDLEWARE_CSRF_EXEMPT = [
+    '/api/',
+]
 
 # Configuración para pruebas
 import sys

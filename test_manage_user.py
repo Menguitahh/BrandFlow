@@ -13,6 +13,22 @@ django.setup()
 
 from django.test import TestCase
 from rest_framework.test import APIClient
+from user_control.models import Users
+
+
+class RoleChangeTests(TestCase):
+    def setUp(self):
+        self.api = APIClient()
+        self.admin = Users.objects.create_user(username='admin', email='a@example.com', password='Admin123!', roles='admin')
+        self.user = Users.objects.create_user(username='u', email='u@example.com', password='Test123!', roles='cliente')
+
+    def test_admin_set_role(self):
+        self.api.force_authenticate(user=self.admin)
+        r = self.api.post('/api/user/admin/set-role/', {'user_id': self.user.id, 'role': 'diseñador'}, format='json')
+        self.assertEqual(r.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.roles, 'diseñador')
+from rest_framework.test import APIClient
 from rest_framework import status
 from user_control.models import Users
 from brand_control.models import Branch

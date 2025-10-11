@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.db.models import Q
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 
@@ -395,6 +396,7 @@ class AdminDesignersListView(APIView):
         })
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 @extend_schema(
     tags=['admin'],
     summary='Cambiar rol de usuario (Admin)',

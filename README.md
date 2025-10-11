@@ -279,6 +279,39 @@ python manage.py create_test_user
 python manage.py check
 ```
 
+---
+
+## Flujo de cotización → aprobación → pago simulado → chat
+
+1) Migrar y crear admin/servicios demo
+
+```bash
+python manage.py migrate
+python manage.py create_admin_if_missing
+```
+
+2) Registrar cliente (rol forzado a `cliente`)
+
+POST `/api/user/register/`
+
+3) Cliente crea cotización
+
+POST `/api/branding/quotes/`
+
+4) Admin aprueba y asigna diseñador
+
+POST `/api/branding/quotes/{id}/approve/`
+
+5) Cliente paga simuladamente
+
+POST `/api/branding/payments/simulate/`
+
+6) Chat del proyecto
+
+POST `/api/branding/projects/messages/`
+
+Docs: schema `/api/schema/`, swagger `/api/swagger/`, redoc `/api/docs/`.
+
 ### Datos de Prueba
 ```json
 {

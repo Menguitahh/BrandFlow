@@ -15,7 +15,6 @@ from .models import Users
 from .serializer import (
     UserRegisterSerializer,
     UserCreateByAdminSerializer,
-    BranchCreateByAdminSerializer,
     UserDetailSerializer,
     UserUpdateSerializer,
 )
@@ -282,27 +281,7 @@ class CreateUserByAdminView(generics.CreateAPIView):
         serializer.save()
 
 
-@extend_schema(
-    tags=['branches'],
-    summary='Crear sucursal (Admin)',
-    description='Permite a un administrador crear nuevas sucursales',
-    request=BranchCreateByAdminSerializer,
-    responses={
-        201: BranchCreateByAdminSerializer,
-        400: {'type': 'object', 'properties': {'error': {'type': 'string'}}},
-        403: {'type': 'object', 'properties': {'detail': {'type': 'string'}}},
-    },
-)
-class CreateBranchByAdminView(generics.CreateAPIView):
-    """Vista para que un admin cree sucursales"""
-    serializer_class = BranchCreateByAdminSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdminUserCustom]
-
-    def perform_create(self, serializer):
-        user = self.request.user
-        if not user.is_admin:
-            raise permissions.PermissionDenied("Solo los administradores pueden crear sucursales.")
-        serializer.save()
+# CreateBranchByAdminView eliminado - modelo Branch no existe
 
 
 @extend_schema(

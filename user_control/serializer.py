@@ -86,13 +86,4 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         fields = ['first_name', 'last_name', 'phone', 'address', 'email']
 
 
-class BranchCreateByAdminSerializer(serializers.ModelSerializer):
-    """Serializer para que un admin cree sucursales para su empresa."""
-
-    class Meta:
-        model = control_model.Branch
-        fields = ['name', 'address', 'phone']
-
-    def create(self, validated_data):
-        company = self.context['request'].user
-        return control_model.Branch.objects.create(company=company, **validated_data)
+# BranchCreateByAdminSerializer eliminado - modelo Branch no existe

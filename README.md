@@ -14,38 +14,52 @@ Este proyecto está centrado en ofrecer soluciones de branding que permitan a la
 
 ## 🔑 Características
 
-- **Diseño de Marca Personalizado:** Crea una identidad única para tu marca, desde el logotipo hasta las paletas de colores, tipografía y más.
-- **Estrategias de Branding:** Desarrolla una estrategia de branding coherente que refleje los valores y la misión de tu empresa.
-- **Interfaz Intuitiva:** Interfaz de usuario amigable que permite a los usuarios sin experiencia en diseño crear una marca profesional y bien estructurada.
-- **Asesoría Personalizada:** Consultoría en línea con expertos en branding para guiar a tu empresa a través del proceso creativo y estratégico.
-- **Optimización Multicanal:** Herramientas para adaptar tu branding a diferentes plataformas y formatos, desde redes sociales hasta materiales impresos.
-- **Sistema de Autenticación Robusto:** Gestión completa de usuarios con roles, sesiones seguras y cookies optimizadas.
-- **API RESTful:** Interfaz de programación completa para integración con frontend y aplicaciones móviles.
+- **Sistema de Cotizaciones:** Los clientes pueden solicitar cotizaciones personalizadas para servicios de branding
+- **Gestión de Proyectos:** Administradores pueden aprobar cotizaciones y asignar diseñadores a proyectos
+- **Chat en Tiempo Real:** Comunicación directa entre clientes, diseñadores y administradores durante el desarrollo del proyecto
+- **Flujo de Pagos Simulado:** Sistema de pagos simulado para completar el ciclo de trabajo
+- **Gestión de Servicios:** Catálogo completo de servicios de branding disponibles
+- **Sistema de Roles:** Administradores, diseñadores y clientes con permisos específicos
+- **Subida de Archivos:** Soporte para adjuntar archivos en el chat del proyecto
+- **Estados de Proyecto:** Seguimiento completo del progreso desde cotización hasta entrega final
+- **Interfaz Moderna:** Diseño responsive y atractivo con fondos gradientes y efectos glassmorphism
 
 ---
 
 ## 🛠️ Tecnologías Utilizadas
 
-- **Backend:** Django 4.2.20
-- **API:** Django REST Framework
-- **Autenticación:** Session Authentication + JWT
-- **Base de Datos:** SQLite (desarrollo) / PostgreSQL (producción)
-- **Documentación API:** drf-spectacular
-- **Gestión de Sesiones:** Django Sessions con cookies seguras
+### Backend
+- **Django 5.2** - Framework web robusto
+- **Django REST Framework** - API RESTful
+- **SQLite** - Base de datos para desarrollo
+- **MySQL** - Base de datos para producción
+- **drf-spectacular** - Documentación automática de API
+
+### Frontend
+- **React 18** - Biblioteca de interfaz de usuario
+- **Bootstrap 5** - Framework CSS
+- **React Router DOM** - Navegación
+- **Axios** - Cliente HTTP
+
+### Autenticación y Seguridad
+- **Session Authentication** - Autenticación por sesiones
+- **JWT** - JSON Web Tokens como respaldo
+- **CORS** - Configuración para desarrollo
+- **CSRF Protection** - Protección contra ataques CSRF
 
 ---
 
 ## 🔐 Sistema de Autenticación y Usuarios
 
 ### Roles de Usuario
-- **Administrador:** Acceso completo al sistema
-- **Cliente:** Usuario final con acceso a productos y compras
-- **Vendedor:** Gestión de ventas y productos
-- **Gerente:** Supervisión y gestión de equipos
+- **Administrador:** Gestión completa del sistema, aprobación de cotizaciones, asignación de diseñadores
+- **Diseñador:** Desarrollo de proyectos asignados, comunicación con clientes
+- **Cliente:** Solicitud de cotizaciones, seguimiento de proyectos, comunicación con el equipo
 
 ### Funcionalidades de Autenticación
-- ✅ **Registro de Usuarios:** Creación de cuentas con validación
+- ✅ **Registro de Usuarios:** Creación de cuentas con validación en tiempo real
 - ✅ **Login/Logout:** Gestión de sesiones seguras
+- ✅ **Validación de Disponibilidad:** Verificación en tiempo real de username y email
 - ✅ **Perfil de Usuario:** Edición y visualización de datos personales
 - ✅ **Gestión de Sesiones:** Cookies seguras con configuración optimizada
 - ✅ **Permisos Granulares:** Control de acceso basado en roles
@@ -53,79 +67,100 @@ Este proyecto está centrado en ofrecer soluciones de branding que permitan a la
 
 ### Endpoints de Autenticación
 ```
-POST /api/user/register/     # Registro de usuarios
-POST /api/user/login/        # Inicio de sesión
-POST /api/user/logout/       # Cierre de sesión
-GET  /api/user/profile/      # Perfil del usuario
-PUT  /api/user/profile/      # Actualizar perfil
-GET  /api/user/session-status/ # Estado de la sesión
+POST /api/user/register/           # Registro de usuarios
+POST /api/user/login/              # Inicio de sesión
+POST /api/user/logout/             # Cierre de sesión
+GET  /api/user/profile/            # Perfil del usuario
+PUT  /api/user/profile/            # Actualizar perfil
+GET  /api/user/session-status/     # Estado de la sesión
+GET  /api/user/check-username/     # Verificar disponibilidad de username
+GET  /api/user/check-email/        # Verificar disponibilidad de email
 ```
 
 ---
 
 ## 🗄️ Arquitectura de Base de Datos
 
-### 🔗 Relaciones entre Modelos
+### Modelos Principales
 
 #### 🧑 Usuario (`user_control.Users`)
 - **Herencia:** `AbstractUser` de Django
 - **Campos adicionales:** `phone`, `address`, `roles`, `company`
-- **Relación:** Self-referential ForeignKey para jerarquía empresarial
-- **Roles:** admin, cliente, vendedor, gerente
+- **Roles:** admin, diseñador, cliente
 - **Relaciones:**
-  - Tiene un **Carrito** (relación uno a uno)
-  - Puede realizar múltiples **Pedidos**
-  - Puede escribir múltiples **Reseñas**
-  - Puede ser **empleado** de otro usuario (empresa)
+  - Puede tener múltiples **Cotizaciones** (QuoteRequest)
+  - Puede tener múltiples **Proyectos** como cliente
+  - Puede ser asignado a múltiples **Proyectos** como diseñador
 
-#### 🛒 Carrito (`brand_control.ShoppCart`)
-- **Pertenece a:** Un **Usuario**
-- **Contiene:** Múltiples **Detalle_Carrito**
-- **Funcionalidad:** Gestión temporal de productos antes de compra
+#### 📋 Categoría de Servicio (`brand_control.ServiceCategory`)
+- **Contiene:** Múltiples **Servicios**
+- **Funcionalidad:** Organización de servicios de branding
 
-#### 📦 Detalle_Carrito (`brand_control.ShoppCartDetails`)
-- **Pertenece a:** Un **Carrito**
-- **Asociado a:** Un único **Producto**
-- **Campos:** `quantity` (cantidad del producto)
-
-#### 🎨 Producto (`brand_control.Product`)
-- **Pertenece a:** Una **Categoría**
+#### 🎨 Servicio (`brand_control.Service`)
+- **Pertenece a:** Una **Categoría de Servicio**
+- **Campos:** `name`, `description`, `base_price`, `features`, `delivery_time`
 - **Relaciones:**
-  - Puede estar en múltiples **Detalle_Carrito**
-  - Puede estar en múltiples **Detalle_Pedido**
-  - Puede tener múltiples **Reseñas**
+  - Puede tener múltiples **Cotizaciones**
+  - Puede tener múltiples **Proyectos**
 
-#### 🗂️ Categoría (`brand_control.Category`)
-- **Contiene:** Múltiples **Productos**
-- **Funcionalidad:** Organización jerárquica de productos
+#### 💬 Solicitud de Cotización (`brand_control.QuoteRequest`)
+- **Cliente:** Usuario que solicita la cotización
+- **Servicio:** Servicio para el cual se solicita la cotización
+- **Campos:** `title`, `description`, `budget`, `status`
+- **Estados:** submitted, approved, rejected
+- **Relaciones:**
+  - Puede generar un **Proyecto** vinculado
 
-#### 🧾 Pedido (`brand_control.Order`)
-- **Pertenece a:** Un **Usuario**
-- **Contiene:** Múltiples **Detalle_Pedido**
-- **Tiene:** Un único **Pago** asociado
-- **Campos:** `order_date`, `total_amount`, `status`
-
-#### 🧮 Detalle_Pedido (`brand_control.OrderDetails`)
-- **Pertenece a:** Un **Pedido**
-- **Asociado a:** Un único **Producto**
-- **Campos:** `quantity`, `unit_price` (precio al momento del pedido)
+#### 🚀 Proyecto (`brand_control.Project`)
+- **Cliente:** Usuario que encarga el proyecto
+- **Diseñador Asignado:** Usuario diseñador responsable
+- **Servicio:** Servicio asociado al proyecto
+- **Campos:** `title`, `brief`, `status`, `total_price`, `paid_amount`
+- **Estados:** quote, pending_approval, approved, payment_pending, in_progress, review, pending_completion_confirmation, delivered, completed, cancelled, on_hold
 
 #### 💳 Pago (`brand_control.Payment`)
-- **Pertenece a:** Un único **Pedido**
-- **Campos:** `method`, `status`, `amount`
-- **Funcionalidad:** Gestión de transacciones
+- **Proyecto:** Proyecto asociado al pago
+- **Campos:** `amount`, `status`, `is_simulated`
+- **Funcionalidad:** Gestión de pagos simulados
 
-#### 📝 Reseña (`brand_control.Reviews`)
-- **Asociada a:** Un **Usuario** y un **Producto**
-- **Campos:** `rating`, `comment`, `created_at`
+#### 💬 Mensaje del Proyecto (`brand_control.ProjectMessage`)
+- **Proyecto:** Proyecto al que pertenece el mensaje
+- **Remitente:** Usuario que envía el mensaje
+- **Campos:** `message`, `attachment`, `attachment_name`
+- **Funcionalidad:** Chat del proyecto con soporte para archivos
 
-#### 🏢 Sucursal (`brand_control.Branch`)
-- **Pertenece a:** Una **Empresa** (Usuario con rol admin)
-- **Funcionalidad:** Gestión de ubicaciones físicas
+### Modelos Legacy (E-commerce)
+*Los siguientes modelos están presentes en el código pero no se utilizan en el flujo actual de branding:*
+- `Product`, `Category`, `Order`, `OrderDetails`, `ShoppCart`, `ShoppCartDetails`, `Reviews`, `Branch`, `StockMovement`
 
-#### 📊 Movimiento de Stock (`brand_control.StockMovement`)
-- **Asociado a:** Un **Producto** y una **Sucursal**
-- **Funcionalidad:** Control de inventario
+---
+
+## 🚀 Flujo de Trabajo
+
+### 1. Solicitud de Cotización
+```
+Cliente → Solicita cotización → Administrador revisa → Aprueba/Rechaza
+```
+
+### 2. Creación de Proyecto
+```
+Cotización aprobada → Proyecto creado → Diseñador asignado → Cliente notificado
+```
+
+### 3. Pago Simulado
+```
+Cliente → Realiza pago simulado → Proyecto pasa a "in_progress"
+```
+
+### 4. Desarrollo y Comunicación
+```
+Diseñador → Trabaja en proyecto → Comunicación via chat → Cliente da feedback
+```
+
+### 5. Finalización
+```
+Diseñador → Marca proyecto como completado → Admin confirma → Proyecto entregado
+```
 
 ---
 
@@ -135,8 +170,9 @@ GET  /api/user/session-status/ # Estado de la sesión
 - Python 3.8+
 - pip
 - virtualenv (recomendado)
+- Node.js 16+ (para frontend)
 
-### Pasos de Instalación
+### Backend Setup
 
 1. **Clonar el repositorio**
 ```bash
@@ -164,14 +200,14 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-5. **Crear superusuario**
+5. **Crear administrador**
 ```bash
 python manage.py createsuperuser
 ```
 
-6. **Crear usuario de prueba (opcional)**
+6. **Crear administrador automático (opcional)**
 ```bash
-python manage.py create_test_user --username testuser --email test@example.com --password Test123!
+python manage.py create_admin_if_missing
 ```
 
 7. **Ejecutar servidor**
@@ -179,89 +215,92 @@ python manage.py create_test_user --username testuser --email test@example.com -
 python manage.py runserver
 ```
 
-### Variables de Entorno
-Crear archivo `.env` en la raíz del proyecto:
-```env
-DEBUG=True
-SECRET_KEY=tu_clave_secreta_aqui
-DATABASE_URL=sqlite:///db.sqlite3
+### Frontend Setup
+
+1. **Navegar al directorio del frontend**
+```bash
+cd ../BrandFlow-Front-End/brandfront
+```
+
+2. **Instalar dependencias**
+```bash
+npm install
+```
+
+3. **Ejecutar servidor de desarrollo**
+```bash
+npm start
 ```
 
 ---
 
 ## 📚 Documentación de la API
 
-### Autenticación
-El sistema utiliza autenticación por sesiones con JWT como respaldo:
+### Endpoints Principales
 
-```python
-# Configuración en settings.py
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
-}
+#### Servicios
+```
+GET    /api/branding/services/           # Listar servicios
+POST   /api/branding/services/           # Crear servicio (admin)
+GET    /api/branding/services/{id}/      # Obtener servicio
+PUT    /api/branding/services/{id}/      # Actualizar servicio (admin)
+DELETE /api/branding/services/{id}/      # Eliminar servicio (admin)
 ```
 
-### Ejemplos de Uso
-
-#### Registro de Usuario
-```bash
-curl -X POST http://localhost:8000/api/user/register/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "nuevo_usuario",
-    "email": "usuario@example.com",
-    "password": "Password123!",
-    "password2": "Password123!",
-    "first_name": "Juan",
-    "last_name": "Pérez",
-    "phone": "123456789",
-    "address": "Calle Principal 123",
-    "roles": "cliente"
-  }'
+#### Cotizaciones
+```
+GET    /api/branding/quotes/             # Listar cotizaciones
+POST   /api/branding/quotes/             # Crear cotización
+GET    /api/branding/quotes/{id}/        # Obtener cotización
+POST   /api/branding/quotes/{id}/approve/ # Aprobar cotización (admin)
+POST   /api/branding/quotes/{id}/reject/  # Rechazar cotización (admin)
 ```
 
-#### Login
-```bash
-curl -X POST http://localhost:8000/api/user/login/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "identifier": "nuevo_usuario",
-    "password": "Password123!"
-  }'
+#### Proyectos
+```
+GET    /api/branding/projects/           # Listar proyectos
+GET    /api/branding/projects/{id}/      # Obtener proyecto
+POST   /api/branding/projects/{id}/assign_designer/ # Asignar diseñador (admin)
+POST   /api/branding/projects/{id}/mark_completed_by_designer/ # Marcar completado (diseñador)
+POST   /api/branding/projects/{id}/confirm_completion/ # Confirmar finalización (admin)
 ```
 
-#### Obtener Perfil
-```bash
-curl -X GET http://localhost:8000/api/user/profile/ \
-  -H "Cookie: sessionid=tu_session_id"
+#### Pagos
 ```
+POST   /api/branding/payments/simulate/  # Simular pago
+GET    /api/branding/payments/           # Listar pagos
+```
+
+#### Chat
+```
+GET    /api/branding/projects/{id}/messages/ # Obtener mensajes
+POST   /api/branding/projects/{id}/messages/ # Enviar mensaje
+```
+
+### Documentación Interactiva
+- **Swagger UI:** `http://localhost:8000/api/swagger/`
+- **ReDoc:** `http://localhost:8000/api/docs/`
+- **Schema:** `http://localhost:8000/api/schema/`
 
 ---
 
-## 🔧 Configuración de Sesiones y Cookies
+## 🎨 Frontend
 
-### Configuración Optimizada para Desarrollo
-```python
-# settings.py
-SESSION_COOKIE_SECURE = False  # True en producción
-SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_AGE = 3600  # 1 hora
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False
-CSRF_COOKIE_SECURE = False  # True en producción
-CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SAMESITE = 'Lax'
-```
+### Características del Frontend
+- **Diseño Responsive:** Funciona en desktop, tablet y móvil
+- **Fondos Modernos:** Gradientes y efectos glassmorphism
+- **Validación en Tiempo Real:** Verificación de disponibilidad de username/email
+- **Chat Interactivo:** Comunicación en tiempo real con subida de archivos
+- **Estados de Proyecto:** Seguimiento visual del progreso
+- **Modales de Pago:** Interfaz profesional para pagos simulados
 
-### Middleware Personalizado
-- **SessionMiddleware:** Gestión automática de sesiones
-- **CSRFMiddleware:** Exención selectiva de CSRF para endpoints de autenticación
+### Páginas Principales
+- **Home:** Página de inicio moderna con gradientes
+- **Servicios:** Catálogo de servicios con fondos atractivos
+- **Cotización:** Formulario de solicitud con validación
+- **Login/Register:** Páginas de autenticación con efectos visuales
+- **Dashboard:** Panel específico por rol (admin, diseñador, cliente)
+- **Chat:** Comunicación del proyecto con archivos adjuntos
 
 ---
 
@@ -269,57 +308,18 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 
 ### Comandos de Prueba
 ```bash
-# Ejecutar tests
+# Ejecutar tests del backend
 python manage.py test
 
 # Crear usuario de prueba
-python manage.py create_test_user
+python manage.py create_test_user --username testuser --email test@example.com --password Test123!
 
 # Verificar estado del sistema
 python manage.py check
-```
 
----
-
-## Flujo de cotización → aprobación → pago simulado → chat
-
-1) Migrar y crear admin/servicios demo
-
-```bash
-python manage.py migrate
-python manage.py create_admin_if_missing
-```
-
-2) Registrar cliente (rol forzado a `cliente`)
-
-POST `/api/user/register/`
-
-3) Cliente crea cotización
-
-POST `/api/branding/quotes/`
-
-4) Admin aprueba y asigna diseñador
-
-POST `/api/branding/quotes/{id}/approve/`
-
-5) Cliente paga simuladamente
-
-POST `/api/branding/payments/simulate/`
-
-6) Chat del proyecto
-
-POST `/api/branding/projects/messages/`
-
-Docs: schema `/api/schema/`, swagger `/api/swagger/`, redoc `/api/docs/`.
-
-### Datos de Prueba
-```json
-{
-  "username": "testuser",
-  "email": "test@example.com", 
-  "password": "Test123!",
-  "roles": "cliente"
-}
+# Ejecutar tests del frontend
+cd BrandFlow-Front-End/brandfront
+npm test
 ```
 
 ---
@@ -331,59 +331,28 @@ BrandFlow/
 ├── BrandFlow/                 # Configuración principal
 │   ├── settings.py           # Configuración del proyecto
 │   ├── urls.py              # URLs principales
+│   ├── middleware.py        # Middleware personalizado
 │   └── wsgi.py              # Configuración WSGI
 ├── user_control/             # App de gestión de usuarios
 │   ├── models.py            # Modelo Users
 │   ├── views.py             # Vistas de autenticación
 │   ├── serializer.py        # Serializers de usuario
 │   ├── permissions.py       # Permisos personalizados
-│   ├── middleware.py        # Middleware personalizado
 │   └── management/          # Comandos de gestión
-├── brand_control/           # App de gestión de productos
-│   ├── models.py            # Modelos de productos
-│   ├── views.py             # Vistas de productos
-│   └── serializer.py        # Serializers de productos
+├── brand_control/           # App de gestión de branding
+│   ├── models.py            # Modelos de servicios, proyectos, cotizaciones
+│   ├── views.py             # Vistas de API
+│   └── serializer.py        # Serializers de branding
 ├── manage.py                # Script de gestión Django
 └── README.md               # Este archivo
+
+BrandFlow-Front-End/
+└── brandfront/             # Aplicación React
+    ├── src/
+    │   ├── components/     # Componentes reutilizables
+    │   ├── pages/         # Páginas principales
+    │   ├── context/       # Context API para estado global
+    │   ├── api/           # Cliente API
+    │   └── App.js         # Componente principal
+    └── package.json       # Dependencias del frontend
 ```
-
----
-
-## 🤝 Contribución
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
----
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
-
----
-
-## 📞 Contacto
-
-- **Desarrollador:** [Tu Nombre]
-- **Email:** [tu-email@example.com]
-- **Proyecto:** [https://github.com/Menguitahh/BrandFlow](https://github.com/Menguitahh/BrandFlow)
-
----
-
-## 🎯 Roadmap
-
-- [ ] Implementación de frontend con React/Vue.js
-- [ ] Sistema de notificaciones en tiempo real
-- [ ] Integración con pasarelas de pago
-- [ ] Dashboard administrativo avanzado
-- [ ] API para aplicaciones móviles
-- [ ] Sistema de reportes y analytics
-- [ ] Integración con redes sociales
-- [ ] Sistema de recomendaciones de productos
-
----
-
-**¡Gracias por usar BrandFlow! 🚀**

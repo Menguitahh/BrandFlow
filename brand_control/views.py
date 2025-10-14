@@ -9,67 +9,21 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
 from .serializer import (
-    ProductSerializer, CategorySerializer, OrderSerializer, OrderDetailsSerializer,
-    ShoppCartSerializer, ShoppCartDetailsSerializer, ReviewsSerializer,
     ServiceCategorySerializer, ServiceSerializer, ProjectSerializer, QuoteRequestSerializer,
     PaymentSerializer, ProjectMessageSerializer
 )
 from .models import (
-    Product, Category, Order, OrderDetails, ShoppCart, ShoppCartDetails, Reviews,
     ServiceCategory, Service, Project, QuoteRequest, Payment, ProjectMessage
 )
 from user_control.models import Users
 from user_control.permissions import IsAdminUserCustom, IsAdmin, IsDesigner, IsProjectParticipant
 
-# class UserSerializerView(viewsets.ModelViewSet):
-#     serializer_class = UserSerializer
-#     queryset = User.objects.all()
-
-
-class ProductSerializerView(viewsets.ModelViewSet):
-    serializer_class = ProductSerializer
-    queryset = Product.objects.all()
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [permissions.AllowAny()]
-        elif self.action in ['create', 'update', 'destroy']:
-            return [permissions.IsAuthenticated(), IsAdminUserCustom()]
-        return super().get_permissions()
-
-
-class CategorySerializerView(viewsets.ModelViewSet):
-    serializer_class = CategorySerializer
-    queryset = Category.objects.all()
-
-class OrderSerializerView(viewsets.ModelViewSet):
-    serializer_class = OrderSerializer
-    queryset = Order.objects.all()
-    permission_classes = [permissions.IsAuthenticated]  # Agregado para usuarios autenticados
-
-class OrderDetailsSerializerView(viewsets.ModelViewSet):
-    serializer_class = OrderDetailsSerializer
-    queryset = OrderDetails.objects.all()
-
-class ShoppCartSerializerView(viewsets.ModelViewSet):
-    serializer_class = ShoppCartSerializer
-    queryset = ShoppCart.objects.all()
-    permission_classes = [permissions.IsAuthenticated]  # Agregado para usuarios autenticados
-
-class ShoppCartDetailsSerializerView(viewsets.ModelViewSet):
-    serializer_class = ShoppCartDetailsSerializer
-    queryset = ShoppCartDetails.objects.all()
-    permission_classes = [permissions.IsAuthenticated]  # Agregado para usuarios autenticados
-
-class ReviewsSerializerView(viewsets.ModelViewSet):
-    serializer_class = ReviewsSerializer
-    queryset = Reviews.objects.all()
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ServiceCategoryViewSet(viewsets.ModelViewSet):
     queryset = ServiceCategory.objects.all()
     serializer_class = ServiceCategorySerializer
+    
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.IsAuthenticated()]
@@ -80,6 +34,7 @@ class ServiceCategoryViewSet(viewsets.ModelViewSet):
 class ServiceViewSet(viewsets.ModelViewSet):
     queryset = Service.objects.all()
     serializer_class = ServiceSerializer
+    
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.IsAuthenticated()]
@@ -88,124 +43,125 @@ class ServiceViewSet(viewsets.ModelViewSet):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class QuoteRequestViewSet(viewsets.ModelViewSet):
-    queryset = QuoteRequest.objects.select_related('client', 'service').all()
+    queryset = QuoteRequest.objects.all()
     serializer_class = QuoteRequestSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
+    
     def get_queryset(self):
         user = self.request.user
-        # Admin ve todas; cliente solo propias; diseñador opcionalmente ninguna
-        if hasattr(user, 'is_admin') and user.is_admin:
-            return self.queryset
-        return self.queryset.filter(client=user)
+        if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
+            # Admin puede ver todas las cotizaciones
+            return QuoteRequest.objects.all().order_by('-created_at')
+        else:
+            # Cliente solo ve las suyas
+            return QuoteRequest.objects.filter(client=user).order_by('-created_at')
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve', 'create']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), IsAdminUserCustom()]
 
-    def perform_create(self, serializer):
-        serializer.save()
-
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsAdmin])
+    @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
+        """Aprobar cotización y crear proyecto"""
         quote = self.get_object()
-        price = request.data.get('price')
-        assigned_to = request.data.get('assigned_to')
-        if not price:
-            return Response({'detail': 'price es requerido'}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            price_val = float(price)
-        except ValueError:
-            return Response({'detail': 'price inválido'}, status=status.HTTP_400_BAD_REQUEST)
-
+        
+        if quote.status != 'submitted':
+            return Response({'detail': 'Solo se pueden aprobar cotizaciones en estado submitted'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        # Crear proyecto
+        project_data = {
+            'title': quote.title,
+            'brief': quote.description,
+            'status': 'approved',
+            'total_price': quote.budget or 0,
+            'client': quote.client,
+            'service': quote.service
+        }
+        
+        project = Project.objects.create(**project_data)
+        
+        # Actualizar cotización
         quote.status = 'approved'
         quote.approved_by = request.user
         quote.approved_at = timezone.now()
-        quote.save()
-
-        # Crear proyecto
-        assigned_user = None
-        if assigned_to:
-            assigned_user = get_object_or_404(Users, id=assigned_to)
-
-        project = Project.objects.create(
-            title=quote.title,
-            brief=quote.description,
-            status='payment_pending',
-            total_price=price_val,
-            paid_amount=0,
-            client=quote.client,
-            assigned_to=assigned_user,
-            service=quote.service
-        )
         quote.linked_project = project
         quote.save()
+        
         return Response({
-            'quote': QuoteRequestSerializer(quote).data,
-            'project': ProjectSerializer(project).data,
-        }, status=status.HTTP_200_OK)
+            'message': 'Cotización aprobada y proyecto creado',
+            'project_id': project.id,
+            'quote': QuoteRequestSerializer(quote).data
+        })
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsAdmin])
+    @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
+        """Rechazar cotización"""
         quote = self.get_object()
-        reason = request.data.get('rejected_reason')
-        if not reason:
-            return Response({'detail': 'rejected_reason es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if quote.status != 'submitted':
+            return Response({'detail': 'Solo se pueden rechazar cotizaciones en estado submitted'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        rejected_reason = request.data.get('rejected_reason', 'Sin motivo especificado')
+        
         quote.status = 'rejected'
-        quote.rejected_reason = reason
-        quote.approved_by = request.user
-        quote.approved_at = timezone.now()
+        quote.rejected_reason = rejected_reason
         quote.save()
-        return Response(QuoteRequestSerializer(quote).data)
+        
+        return Response({
+            'message': 'Cotización rechazada',
+            'quote': QuoteRequestSerializer(quote).data
+        })
 
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = Project.objects.select_related('client', 'assigned_to', 'service').all()
+    queryset = Project.objects.all()
     serializer_class = ProjectSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
+    
     def get_queryset(self):
         user = self.request.user
-        # Siempre obtener datos frescos de la base de datos
-        fresh_queryset = Project.objects.select_related('client', 'assigned_to', 'service').all()
-        
-        if hasattr(user, 'is_admin') and user.is_admin:
-            return fresh_queryset
-        if hasattr(user, 'is_designer') and user.is_designer:
-            return fresh_queryset.filter(assigned_to=user)
-        # cliente
-        return fresh_queryset.filter(client=user)
-
-    def perform_create(self, serializer):
-        # Si un cliente crea proyecto directo, forzar status='quote'
-        user = self.request.user
-        if hasattr(user, 'is_admin') and user.is_admin:
-            serializer.save(client=user)
+        if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
+            # Admin puede ver todos los proyectos
+            return Project.objects.all().order_by('-created_at')
+        elif hasattr(user, 'is_designer') and (user.is_designer() if callable(user.is_designer) else user.is_designer):
+            # Diseñador ve solo los asignados
+            return Project.objects.filter(assigned_to=user).order_by('-created_at')
         else:
-            serializer.save(client=user, status='quote')
+            # Cliente ve solo los suyos
+            return Project.objects.filter(client=user).order_by('-created_at')
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), IsAdminUserCustom()]
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsAdmin])
+    @action(detail=True, methods=['post'])
     def assign_designer(self, request, pk=None):
+        """Asignar diseñador a proyecto"""
         project = self.get_object()
         designer_id = request.data.get('designer_id')
+        
         if not designer_id:
-            return Response({'detail': 'designer_id es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'designer_id es requerido'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
         
         try:
             designer = Users.objects.get(id=designer_id)
+            if not (hasattr(designer, 'is_designer') and designer.is_designer):
+                return Response({'detail': 'El usuario seleccionado no es un diseñador'}, 
+                              status=status.HTTP_400_BAD_REQUEST)
         except Users.DoesNotExist:
-            return Response({'detail': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Diseñador no encontrado'}, 
+                          status=status.HTTP_404_NOT_FOUND)
         
-        # Verificar que el usuario sea un diseñador
-        if not designer.is_designer:
-            return Response({'detail': 'El usuario debe tener rol de diseñador'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Asignar diseñador y actualizar estado del proyecto
         project.assigned_to = designer
-        if project.status == 'quote':
-            project.status = 'in_progress'
-            project.start_date = timezone.now().date()
+        project.status = 'in_progress'
         project.save()
         
         return Response({
-            'message': f'Diseñador {designer.username} asignado al proyecto exitosamente',
+            'message': f'Diseñador {designer.username} asignado al proyecto',
             'project': ProjectSerializer(project).data
         })
 
@@ -215,17 +171,14 @@ class ProjectViewSet(viewsets.ModelViewSet):
         project = self.get_object()
         user = request.user
         
-        # Solo el diseñador asignado puede marcar como completado
         if not (hasattr(user, 'is_designer') and user.is_designer and project.assigned_to == user):
             return Response({'detail': 'Solo el diseñador asignado puede marcar como completado'}, 
                           status=status.HTTP_403_FORBIDDEN)
         
-        # Solo proyectos en progreso pueden ser marcados como completados
         if project.status != 'in_progress':
             return Response({'detail': 'Solo proyectos en progreso pueden ser marcados como completados'}, 
                           status=status.HTTP_400_BAD_REQUEST)
         
-        # Cambiar estado a pendiente de confirmación
         project.status = 'pending_completion_confirmation'
         project.save()
         
@@ -239,12 +192,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """Permite al admin confirmar que un proyecto está completado"""
         project = self.get_object()
         
-        # Solo proyectos pendientes de confirmación pueden ser confirmados
         if project.status != 'pending_completion_confirmation':
             return Response({'detail': 'Solo proyectos pendientes de confirmación pueden ser confirmados'}, 
                           status=status.HTTP_400_BAD_REQUEST)
         
-        # Cambiar estado a completado
         project.status = 'completed'
         project.save()
         
@@ -258,12 +209,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """Permite al admin marcar directamente un proyecto como completado"""
         project = self.get_object()
         
-        # Solo proyectos en progreso pueden ser marcados como completados
         if project.status not in ['in_progress', 'pending_completion_confirmation']:
-            return Response({'detail': 'Solo proyectos en progreso pueden ser marcados como completados'}, 
+            return Response({'detail': 'Solo proyectos en progreso o pendientes de confirmación pueden ser marcados como completados'}, 
                           status=status.HTTP_400_BAD_REQUEST)
         
-        # Cambiar estado a completado directamente
         project.status = 'completed'
         project.save()
         
@@ -275,97 +224,64 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ProjectMessageViewSet(viewsets.ModelViewSet):
-    queryset = ProjectMessage.objects.select_related('project', 'sender').all()
     serializer_class = ProjectMessageSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
+    
     def get_queryset(self):
-        user = self.request.user
-        qs = self.queryset
-        # Filtro por project si viene query param
-        project_id = self.request.query_params.get('project')
-        if project_id:
-            qs = qs.filter(project_id=project_id)
-        if hasattr(user, 'is_admin') and user.is_admin:
-            return qs
-        # filtrar por participación
-        return qs.filter(Q(project__client=user) | Q(project__assigned_to=user))
-
+        project_id = self.kwargs.get('project_pk')
+        return ProjectMessage.objects.filter(project_id=project_id).order_by('created_at')
+    
+    def get_permissions(self):
+        return [permissions.IsAuthenticated(), IsProjectParticipant()]
+    
     def perform_create(self, serializer):
-        # requiere project en body y que sea participante o admin
-        project = get_object_or_404(Project, id=self.request.data.get('project'))
-        user = self.request.user
-        is_admin = hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin)
-        if not is_admin and project.client_id != user.id and (project.assigned_to_id or 0) != user.id:
-            raise PermissionDenied('No autorizado para comentar en este proyecto')
-        
-        # Validar archivo si existe
-        if 'attachment' in self.request.data and self.request.data['attachment']:
-            attachment = self.request.data['attachment']
-            # Validar tipo de archivo
-            allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf']
-            if attachment.content_type not in allowed_types:
-                raise serializers.ValidationError({'attachment': 'Solo se permiten archivos JPG, PNG, GIF y PDF'})
-            
-            # Validar tamaño (máximo 10MB)
-            if attachment.size > 10 * 1024 * 1024:
-                raise serializers.ValidationError({'attachment': 'El archivo no puede ser mayor a 10MB'})
-        
-        serializer.save(sender=user)
+        project_id = self.kwargs.get('project_pk')
+        project = get_object_or_404(Project, id=project_id)
+        serializer.save(sender=self.request.user, project=project)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
 class PaymentViewSet(viewsets.ModelViewSet):
-    queryset = Payment.objects.select_related('project').all()
+    queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve', 'create']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), IsAdminUserCustom()]
 
-    def get_queryset(self):
-        user = self.request.user
-        if hasattr(user, 'is_admin') and user.is_admin:
-            return self.queryset
-        # diseñador: pagos de asignados; cliente: de sus proyectos
-        if hasattr(user, 'is_designer') and user.is_designer:
-            return self.queryset.filter(project__assigned_to=user)
-        return self.queryset.filter(project__client=user)
-
-    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=False, methods=['post'])
     def simulate(self, request):
+        """Simular pago de proyecto"""
         project_id = request.data.get('project_id')
         amount = request.data.get('amount')
-        cardholder_name = request.data.get('cardholder_name', '')
-        card_last4 = request.data.get('card_last4', '')
+        
         if not project_id or not amount:
-            return Response({'detail': 'project_id y amount son requeridos'}, status=status.HTTP_400_BAD_REQUEST)
-        project = get_object_or_404(Project, id=project_id)
-
-        user = request.user
-        is_admin = hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin)
-        if not (is_admin or project.client_id == user.id):
-            return Response({'detail': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
-
+            return Response({'detail': 'project_id y amount son requeridos'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
         try:
-            from decimal import Decimal
-            amount_val = Decimal(str(amount))
-        except (ValueError, TypeError):
-            return Response({'detail': 'amount inválido'}, status=status.HTTP_400_BAD_REQUEST)
-        if amount_val <= 0:
-            return Response({'detail': 'amount debe ser > 0'}, status=status.HTTP_400_BAD_REQUEST)
-
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response({'detail': 'Proyecto no encontrado'}, 
+                          status=status.HTTP_404_NOT_FOUND)
+        
+        # Crear pago simulado
         payment = Payment.objects.create(
             project=project,
-            amount=amount_val,
+            amount=amount,
             status='completed',
             is_simulated=True,
-            cardholder_name=cardholder_name,
-            card_last4=card_last4[:4]
+            cardholder_name=request.data.get('cardholder_name', ''),
+            card_last4=request.data.get('card_last4', '')
         )
-        # actualizar proyecto
-        project.paid_amount = (project.paid_amount or Decimal('0')) + amount_val
-        if project.status in ['payment_pending', 'approved'] and project.paid_amount >= project.total_price:
-            project.status = 'in_progress'
+        
+        # Actualizar proyecto
+        project.paid_amount = amount
+        project.status = 'in_progress'
         project.save()
+        
         return Response({
-            'project': ProjectSerializer(project).data,
-            'payment': PaymentSerializer(payment).data
-        }, status=status.HTTP_201_CREATED)
+            'message': 'Pago simulado exitoso',
+            'payment': PaymentSerializer(payment).data,
+            'project': ProjectSerializer(project).data
+        })

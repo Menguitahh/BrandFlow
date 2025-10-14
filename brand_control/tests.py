@@ -7,605 +7,362 @@ from django.utils import timezone
 from decimal import Decimal
 import json
 
-from .models import Category, Product, Order, OrderDetails, ShoppCart, ShoppCartDetails, StockMovement
+from .models import ServiceCategory, Service, Project, QuoteRequest, Payment, ProjectMessage
 from user_control.models import Users
 
 User = get_user_model()
 
 
-class CoreEcommerceTestCase(APITestCase):
-    """Pruebas para las funcionalidades core del ecommerce"""
+class BrandingTestCase(APITestCase):
+    """Pruebas para las funcionalidades de branding"""
     
     def setUp(self):
         """Configuración inicial para todas las pruebas"""
-        # Crear usuario de prueba
-        self.user = Users.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='Test123!',
-            first_name='Test',
-            last_name='User',
-            roles='cliente'
-        )
-        
         # Crear usuario admin
         self.admin_user = Users.objects.create_user(
             username='admin',
-            email='admin@example.com',
-            password='Admin123!',
-            first_name='Admin',
-            last_name='User',
+            email='admin@test.com',
+            password='admin123',
             roles='admin'
         )
         
-        # Crear categoría de prueba
-        self.category = Category.objects.create(
-            name='Electrónicos',
-            description='Productos electrónicos'
+        # Crear usuario cliente
+        self.client_user = Users.objects.create_user(
+            username='cliente',
+            email='cliente@test.com',
+            password='cliente123',
+            roles='cliente'
         )
         
-        # Crear producto de prueba
-        self.product = Product.objects.create(
-            name='Laptop Gaming',
-            description='Laptop para gaming de alta calidad',
-            price=Decimal('1500.00'),
-            stock=10,
-            category_id=self.category,
-            is_active=True
+        # Crear usuario diseñador
+        self.designer_user = Users.objects.create_user(
+            username='diseñador',
+            email='diseñador@test.com',
+            password='diseñador123',
+            roles='diseñador'
         )
         
-        # Crear carrito de prueba
-        self.cart = ShoppCart.objects.create(user=self.user)
+        # Crear categoría de servicio
+        self.service_category = ServiceCategory.objects.create(
+            name='Diseño Gráfico',
+            description='Servicios de diseño gráfico'
+        )
+        
+        # Crear servicio
+        self.service = Service.objects.create(
+            category=self.service_category,
+            name='Diseño de Logo',
+            description='Diseño profesional de logotipos',
+            base_price=Decimal('150.00'),
+            delivery_time='5-7 días'
+        )
         
         # Configurar cliente API
         self.client = APIClient()
     
-    def test_1_user_registration(self):
-        """Prueba 1: Registro de usuarios"""
-        print("\n=== PRUEBA 1: REGISTRO DE USUARIOS ===")
-        
-        # Datos antes del registro
-        initial_user_count = Users.objects.count()
-        print(f"Usuarios antes del registro: {initial_user_count}")
-        
-        # Datos para el nuevo usuario
-        user_data = {
-            'username': 'nuevo_usuario',
-            'email': 'nuevo@example.com',
-            'password': 'Password123!',
-            'password2': 'Password123!',
-            'first_name': 'Nuevo',
-            'last_name': 'Usuario',
-            'phone': '123456789',
-            'address': 'Calle Nueva 123',
-            'roles': 'cliente'
-        }
-        
-        # Realizar registro
-        url = reverse('user_control:register')
-        response = self.client.post(url, user_data, format='json')
-        
-        print(f"Respuesta del registro: {response.status_code}")
-        print(f"Contenido de la respuesta: {response.data}")
-        
-        # Verificar que el registro fue exitoso
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        
-        # Verificar que el usuario se creó en la base de datos
-        final_user_count = Users.objects.count()
-        print(f"Usuarios después del registro: {final_user_count}")
-        self.assertEqual(final_user_count, initial_user_count + 1)
-        
-        # Verificar que el usuario existe
-        new_user = Users.objects.get(username='nuevo_usuario')
-        self.assertEqual(new_user.email, 'nuevo@example.com')
-        self.assertEqual(new_user.roles, 'cliente')
-        
-        print("Registro de usuario exitoso")
-    
-    def test_2_user_login(self):
-        """Prueba 2: Login de usuarios"""
-        print("\n=== PRUEBA 2: LOGIN DE USUARIOS ===")
-        
-        # Datos de login
-        login_data = {
-            'identifier': 'testuser',
-            'password': 'Test123!'
-        }
-        
-        # Realizar login
-        url = reverse('user_control:login')
-        response = self.client.post(url, login_data, format='json')
-        
-        print(f"Respuesta del login: {response.status_code}")
-        print(f"Contenido de la respuesta: {response.data}")
-        
-        # Verificar que el login fue exitoso
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('message', response.data)
-        self.assertIn('user', response.data)
-        self.assertIn('session_id', response.data)
-        
-        # Verificar que el usuario está autenticado
-        self.assertTrue(response.data['user']['username'] == 'testuser')
-        
-        print("Login de usuario exitoso")
-    
-    def test_3_product_creation_admin(self):
-        """Prueba 3: Agregado de productos (como admin)"""
-        print("\n=== PRUEBA 3: AGREGADO DE PRODUCTOS (ADMIN) ===")
+    def test_1_service_creation(self):
+        """Prueba 1: Creación de servicios"""
+        print("\n=== PRUEBA 1: CREACIÓN DE SERVICIOS ===")
         
         # Login como admin
         self.client.force_authenticate(user=self.admin_user)
         
-        # Datos antes de crear producto
-        initial_product_count = Product.objects.count()
-        print(f"Productos antes de crear: {initial_product_count}")
-        
-        # Datos del nuevo producto
-        product_data = {
-            'name': 'Smartphone Pro',
-            'description': 'Smartphone de última generación',
-            'price': '800.00',
-            'stock': 15,
-            'category_id': self.category.id,
-            'is_active': True
+        # Crear nuevo servicio
+        service_data = {
+            'category_id': self.service_category.id,
+            'name': 'Identidad Corporativa',
+            'description': 'Diseño completo de identidad corporativa',
+            'base_price': '400.00',
+            'delivery_time': '10-14 días'
         }
         
-        # Crear producto
-        url = reverse('Product-list')
-        response = self.client.post(url, product_data, format='json')
+        url = reverse('services-list')
+        response = self.client.post(url, service_data, format='json')
         
-        print(f"Respuesta de creación de producto: {response.status_code}")
+        print(f"Respuesta de creación de servicio: {response.status_code}")
         print(f"Contenido de la respuesta: {response.data}")
         
-        # Verificar que el producto se creó exitosamente
+        # Verificar que se creó exitosamente
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         
-        # Verificar que el producto existe en la base de datos
-        final_product_count = Product.objects.count()
-        print(f"Productos después de crear: {final_product_count}")
-        self.assertEqual(final_product_count, initial_product_count + 1)
+        # Verificar que el servicio existe en la base de datos
+        self.assertTrue(Service.objects.filter(name='Identidad Corporativa').exists())
         
-        # Verificar datos del producto creado
-        new_product = Product.objects.get(name='Smartphone Pro')
-        self.assertEqual(new_product.price, Decimal('800.00'))
-        self.assertEqual(new_product.stock, 15)
-        self.assertEqual(new_product.category_id, self.category)
-        
-        print("Creación de producto exitosa")
+        print("Creación de servicio exitosa")
     
-    def test_4_product_listing(self):
-        """Prueba 4: Listado de productos"""
-        print("\n=== PRUEBA 4: LISTADO DE PRODUCTOS ===")
+    def test_2_quote_request_creation(self):
+        """Prueba 2: Creación de solicitud de cotización"""
+        print("\n=== PRUEBA 2: CREACIÓN DE SOLICITUD DE COTIZACIÓN ===")
         
-        # Crear productos adicionales para la prueba
-        Product.objects.create(
-            name='Tablet Pro',
-            description='Tablet profesional',
-            price=Decimal('500.00'),
-            stock=8,
-            category_id=self.category,
-            is_active=True
-        )
+        # Login como cliente
+        self.client.force_authenticate(user=self.client_user)
         
-        Product.objects.create(
-            name='Auriculares Wireless',
-            description='Auriculares bluetooth',
-            price=Decimal('150.00'),
-            stock=20,
-            category_id=self.category,
-            is_active=True
-        )
-        
-        # Obtener listado de productos
-        url = reverse('Product-list')
-        response = self.client.get(url)
-        
-        print(f"Respuesta del listado: {response.status_code}")
-        print(f"Cantidad de productos: {len(response.data)}")
-        
-        # Verificar que la respuesta fue exitosa
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
-        # Verificar que se obtuvieron productos
-        self.assertGreater(len(response.data), 0)
-        
-        # Verificar estructura de los datos
-        if len(response.data) > 0:
-            product = response.data[0]
-            self.assertIn('id', product)
-            self.assertIn('name', product)
-            self.assertIn('price', product)
-            self.assertIn('stock', product)
-        
-        print("Listado de productos exitoso")
-    
-    def test_5_add_product_to_cart(self):
-        """Prueba 5: Agregar producto al carrito"""
-        print("\n=== PRUEBA 5: AGREGAR PRODUCTO AL CARRITO ===")
-        
-        # Login como usuario normal
-        self.client.force_authenticate(user=self.user)
-        
-        # Datos antes de agregar al carrito
-        initial_cart_details_count = ShoppCartDetails.objects.count()
-        print(f"Detalles de carrito antes: {initial_cart_details_count}")
-        
-        # Datos para agregar al carrito
-        cart_detail_data = {
-            'idproduct': self.product.id,
-            'idshoppcart': self.cart.idshoppcart,
-            'quantity': 2
+        # Crear solicitud de cotización
+        quote_data = {
+            'service': self.service.id,
+            'title': 'Logo para mi empresa',
+            'description': 'Necesito un logo moderno para mi startup tecnológica',
+            'budget': '200.00'
         }
         
-        # Agregar producto al carrito
-        url = reverse('shoppcartdetails-list')
-        response = self.client.post(url, cart_detail_data, format='json')
+        url = reverse('quotes-list')
+        response = self.client.post(url, quote_data, format='json')
         
-        print(f"Respuesta de agregar al carrito: {response.status_code}")
+        print(f"Respuesta de creación de cotización: {response.status_code}")
         print(f"Contenido de la respuesta: {response.data}")
         
-        # Verificar que se agregó exitosamente
+        # Verificar que se creó exitosamente
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         
-        # Verificar que se creó el detalle del carrito
-        final_cart_details_count = ShoppCartDetails.objects.count()
-        print(f"Detalles de carrito después: {final_cart_details_count}")
-        self.assertEqual(final_cart_details_count, initial_cart_details_count + 1)
+        # Verificar que la cotización existe en la base de datos
+        self.assertTrue(QuoteRequest.objects.filter(title='Logo para mi empresa').exists())
         
-        # Verificar datos del detalle creado
-        cart_detail = ShoppCartDetails.objects.get(
-            idproduct=self.product,
-            idshoppcart=self.cart
-        )
-        self.assertEqual(cart_detail.quantity, 2)
-        
-        print("Agregar producto al carrito exitoso")
+        print("Creación de cotización exitosa")
     
-    def test_6_create_order_from_cart(self):
-        """Prueba 6: Crear pedido desde el carrito"""
-        print("\n=== PRUEBA 6: CREAR PEDIDO DESDE EL CARRITO ===")
+    def test_3_quote_approval_and_project_creation(self):
+        """Prueba 3: Aprobación de cotización y creación de proyecto"""
+        print("\n=== PRUEBA 3: APROBACIÓN DE COTIZACIÓN ===")
         
-        # Login como usuario normal
-        self.client.force_authenticate(user=self.user)
-        
-        # Agregar producto al carrito primero
-        cart_detail = ShoppCartDetails.objects.create(
-            idproduct=self.product,
-            idshoppcart=self.cart,
-            quantity=3
+        # Crear cotización
+        quote = QuoteRequest.objects.create(
+            client=self.client_user,
+            service=self.service,
+            title='Logo para mi empresa',
+            description='Necesito un logo moderno',
+            budget=Decimal('200.00')
         )
-        
-        # Datos antes de crear el pedido
-        initial_order_count = Order.objects.count()
-        initial_order_details_count = OrderDetails.objects.count()
-        initial_stock = self.product.stock
-        print(f"Pedidos antes: {initial_order_count}")
-        print(f"Detalles de pedido antes: {initial_order_details_count}")
-        print(f"Stock antes: {initial_stock}")
-        
-        # Datos del pedido
-        order_data = {
-            'user': self.user.id,
-            'status': 'pending',
-            'total': '4500.00'  # 3 * 1500.00
-        }
-        
-        # Crear pedido
-        url = reverse('Order-list')
-        response = self.client.post(url, order_data, format='json')
-        
-        print(f"Respuesta de creación de pedido: {response.status_code}")
-        print(f"Contenido de la respuesta: {response.data}")
-        
-        # Verificar que el pedido se creó exitosamente
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        
-        # Verificar que el pedido existe
-        final_order_count = Order.objects.count()
-        print(f"Pedidos después: {final_order_count}")
-        self.assertEqual(final_order_count, initial_order_count + 1)
-        
-        # Crear detalle del pedido
-        order = Order.objects.latest('idorder')
-        order_detail_data = {
-            'idproduct': self.product.id,
-            'idorder': order.idorder,
-            'quantity': 3,
-            'price': '1500.00'
-        }
-        
-        url_detail = reverse('OrderDetails-list')
-        response_detail = self.client.post(url_detail, order_detail_data, format='json')
-        
-        print(f"Respuesta de creación de detalle: {response_detail.status_code}")
-        
-        # Verificar que el detalle se creó exitosamente
-        self.assertEqual(response_detail.status_code, status.HTTP_201_CREATED)
-        
-        # Verificar que el stock se actualizó
-        self.product.refresh_from_db()
-        final_stock = self.product.stock
-        print(f"Stock después: {final_stock}")
-        self.assertEqual(final_stock, initial_stock - 3)
-        
-        # Verificar que se creó el movimiento de stock
-        stock_movements = StockMovement.objects.filter(product=self.product)
-        self.assertGreater(stock_movements.count(), 0)
-        
-        print("Creación de pedido desde carrito exitosa")
-    
-    def test_7_stock_management(self):
-        """Prueba 7: Gestión de stock (CRUD)"""
-        print("\n=== PRUEBA 7: GESTIÓN DE STOCK ===")
         
         # Login como admin
         self.client.force_authenticate(user=self.admin_user)
         
-        # READ - Leer stock
-        print("--- READ: Leer stock ---")
-        initial_stock = self.product.stock
-        print(f"Stock inicial del producto: {initial_stock}")
+        # Aprobar cotización
+        url = reverse('quotes-approve', kwargs={'pk': quote.id})
+        response = self.client.post(url, format='json')
         
-        # Verificar método has_stock
-        self.assertTrue(self.product.has_stock(5))
-        self.assertFalse(self.product.has_stock(15))
+        print(f"Respuesta de aprobación: {response.status_code}")
+        print(f"Contenido de la respuesta: {response.data}")
         
-        # UPDATE - Actualizar stock (disminuir)
-        print("--- UPDATE: Actualizar stock (disminuir) ---")
-        success = self.product.update_stock(2, 'decrease')
-        self.assertTrue(success)
-        self.product.refresh_from_db()
-        print(f"Stock después de disminuir 2: {self.product.stock}")
-        self.assertEqual(self.product.stock, initial_stock - 2)
-        
-        # UPDATE - Actualizar stock (aumentar)
-        print("--- UPDATE: Actualizar stock (aumentar) ---")
-        success = self.product.update_stock(5, 'increase')
-        self.assertTrue(success)
-        self.product.refresh_from_db()
-        print(f"Stock después de aumentar 5: {self.product.stock}")
-        self.assertEqual(self.product.stock, initial_stock - 2 + 5)
-        
-        # Verificar que no se puede disminuir más stock del disponible
-        print("--- Verificar límite de stock ---")
-        success = self.product.update_stock(100, 'decrease')
-        self.assertFalse(success)
-        self.product.refresh_from_db()
-        print(f"Stock después de intento fallido: {self.product.stock}")
-        
-        print("Gestión de stock exitosa")
-    
-    def test_8_order_cancellation_stock_restoration(self):
-        """Prueba 8: Cancelación de pedido y restauración de stock"""
-        print("\n=== PRUEBA 8: CANCELACIÓN DE PEDIDO Y RESTAURACIÓN DE STOCK ===")
-        
-        # Crear pedido con detalle
-        order = Order.objects.create(
-            user=self.user,
-            status='pending',
-            total=Decimal('1500.00')
-        )
-        
-        order_detail = OrderDetails.objects.create(
-            idproduct=self.product,
-            idorder=order,
-            quantity=2,
-            price=Decimal('1500.00')
-        )
-        
-        # Stock antes de la cancelación
-        initial_stock = self.product.stock
-        print(f"Stock antes de cancelación: {initial_stock}")
-        
-        # Cancelar pedido
-        order.cancel_order()
-        order.refresh_from_db()
-        
-        print(f"Estado del pedido después de cancelación: {order.status}")
-        self.assertEqual(order.status, 'cancelled')
-        
-        # Verificar que el stock se restauró
-        self.product.refresh_from_db()
-        final_stock = self.product.stock
-        print(f"Stock después de cancelación: {final_stock}")
-        self.assertEqual(final_stock, initial_stock + 2)
-        
-        # Verificar que se creó movimiento de stock para restauración
-        restoration_movements = StockMovement.objects.filter(
-            product=self.product,
-            movement_type='in',
-            reason__contains='Restauración'
-        )
-        self.assertGreater(restoration_movements.count(), 0)
-        
-        print("Cancelación de pedido y restauración de stock exitosa")
-    
-    def test_9_complete_ecommerce_flow(self):
-        """Prueba 9: Flujo completo de ecommerce"""
-        print("\n=== PRUEBA 9: FLUJO COMPLETO DE ECOMMERCE ===")
-        
-        # 1. Login del usuario
-        self.client.force_authenticate(user=self.user)
-        print("1. Usuario autenticado")
-        
-        # 2. Ver productos disponibles
-        url_products = reverse('Product-list')
-        response_products = self.client.get(url_products)
-        self.assertEqual(response_products.status_code, status.HTTP_200_OK)
-        print("2. Productos obtenidos")
-        
-        # 3. Agregar productos al carrito
-        cart_detail_data = {
-            'idproduct': self.product.id,
-            'idshoppcart': self.cart.idshoppcart,
-            'quantity': 1
-        }
-        url_cart = reverse('shoppcartdetails-list')
-        response_cart = self.client.post(url_cart, cart_detail_data, format='json')
-        self.assertEqual(response_cart.status_code, status.HTTP_201_CREATED)
-        print("3. Producto agregado al carrito")
-        
-        # 4. Crear pedido
-        order_data = {
-            'user': self.user.id,
-            'status': 'pending',
-            'total': '1500.00'
-        }
-        url_order = reverse('Order-list')
-        response_order = self.client.post(url_order, order_data, format='json')
-        self.assertEqual(response_order.status_code, status.HTTP_201_CREATED)
-        print("4. Pedido creado")
-        
-        # 5. Verificar que el stock se actualizó (nota: en este flujo, el stock se descuenta al crear OrderDetails)
-        # Creamos el detalle ahora para generar el descuento
-        order = Order.objects.latest('idorder')
-        OrderDetails.objects.create(idproduct=self.product, idorder=order, quantity=1, price=Decimal('1500.00'))
-        self.product.refresh_from_db()
-        self.assertEqual(self.product.stock, 9)
-        print("5. Stock actualizado correctamente")
-        
-        # 6. Verificar que se creó movimiento de stock
-        stock_movements = StockMovement.objects.filter(product=self.product)
-        self.assertGreater(stock_movements.count(), 0)
-        print("6. Movimiento de stock registrado")
-        
-        print("Flujo completo de ecommerce exitoso")
-
-
-class StockManagementTestCase(APITestCase):
-    """Pruebas específicas para gestión de stock"""
-    
-    def setUp(self):
-        self.user = Users.objects.create_user(
-            username='stockuser',
-            email='stock@example.com',
-            password='Stock123!',
-            roles='admin'
-        )
-        
-        self.category = Category.objects.create(
-            name='Test Category',
-            description='Categoría de prueba'
-        )
-        
-        self.product = Product.objects.create(
-            name='Test Product',
-            description='Producto de prueba',
-            price=Decimal('100.00'),
-            stock=50,
-            category_id=self.category
-        )
-        
-        self.client.force_authenticate(user=self.user)
-    
-    def test_stock_creation(self):
-        """Prueba creación de stock"""
-        print("\n=== PRUEBA: CREACIÓN DE STOCK ===")
-        
-        # Crear producto con stock inicial
-        product_data = {
-            'name': 'Nuevo Producto',
-            'description': 'Producto con stock inicial',
-            'price': '200.00',
-            'stock': 25,
-            'category_id': self.category.id,
-            'is_active': True
-        }
-        
-        url = reverse('Product-list')
-        response = self.client.post(url, product_data, format='json')
-        
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['stock'], 25)
-        print("Creación de stock exitosa")
-    
-    def test_stock_reading(self):
-        """Prueba lectura de stock"""
-        print("\n=== PRUEBA: LECTURA DE STOCK ===")
-        
-        url = reverse('Product-detail', args=[self.product.id])
-        response = self.client.get(url)
-        
+        # Verificar que se aprobó exitosamente
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['stock'], 50)
-        print("Lectura de stock exitosa")
+        
+        # Verificar que se creó el proyecto
+        quote.refresh_from_db()
+        self.assertIsNotNone(quote.linked_project)
+        self.assertEqual(quote.status, 'approved')
+        
+        print("Aprobación de cotización y creación de proyecto exitosa")
     
-    def test_stock_update(self):
-        """Prueba actualización de stock"""
-        print("\n=== PRUEBA: ACTUALIZACIÓN DE STOCK ===")
+    def test_4_project_assignment(self):
+        """Prueba 4: Asignación de diseñador a proyecto"""
+        print("\n=== PRUEBA 4: ASIGNACIÓN DE DISEÑADOR ===")
         
-        # Actualizar stock
-        product_data = {
-            'name': self.product.name,
-            'description': self.product.description,
-            'price': str(self.product.price),
-            'stock': 30,  # Cambiar de 50 a 30
-            'category_id': self.category.id,
-            'is_active': True
-        }
+        # Crear proyecto
+        project = Project.objects.create(
+            title='Logo para mi empresa',
+            brief='Diseño de logo moderno',
+            client=self.client_user,
+            service=self.service,
+            status='approved',
+            total_price=Decimal('200.00')
+        )
         
-        url = reverse('Product-detail', args=[self.product.id])
-        response = self.client.put(url, product_data, format='json')
+        # Login como admin
+        self.client.force_authenticate(user=self.admin_user)
         
+        # Asignar diseñador
+        url = reverse('projects-assign-designer', kwargs={'pk': project.id})
+        response = self.client.post(url, {'designer_id': self.designer_user.id}, format='json')
+        
+        print(f"Respuesta de asignación: {response.status_code}")
+        print(f"Contenido de la respuesta: {response.data}")
+        
+        # Verificar que se asignó exitosamente
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['stock'], 30)
-        print("Actualización de stock exitosa")
+        
+        # Verificar que el proyecto tiene diseñador asignado
+        project.refresh_from_db()
+        self.assertEqual(project.assigned_to, self.designer_user)
+        self.assertEqual(project.status, 'in_progress')
+        
+        print("Asignación de diseñador exitosa")
     
-    def test_stock_deletion_prevention(self):
-        """Prueba prevención de eliminación de stock"""
-        print("\n=== PRUEBA: PREVENCIÓN DE ELIMINACIÓN DE STOCK ===")
+    def test_5_simulated_payment(self):
+        """Prueba 5: Pago simulado"""
+        print("\n=== PRUEBA 5: PAGO SIMULADO ===")
         
-        # Intentar eliminar producto (no recomendado)
-        url = reverse('Product-detail', args=[self.product.id])
-        response = self.client.delete(url)
+        # Crear proyecto
+        project = Project.objects.create(
+            title='Logo para mi empresa',
+            brief='Diseño de logo moderno',
+            client=self.client_user,
+            service=self.service,
+            status='approved',
+            total_price=Decimal('200.00')
+        )
         
-        # Verificar que se puede eliminar (pero no es recomendado)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        print("Producto eliminado (no recomendado en producción)")
+        # Login como cliente
+        self.client.force_authenticate(user=self.client_user)
         
-        # Alternativa: marcar como inactivo en lugar de eliminar
-        product_data = {
-            'name': 'Producto Inactivo',
-            'description': 'Producto marcado como inactivo',
-            'price': '100.00',
-            'stock': 0,
-            'category_id': self.category.id,
-            'is_active': False  # Marcar como inactivo
+        # Realizar pago simulado
+        url = reverse('payments-simulate')
+        payment_data = {
+            'project_id': project.id,
+            'amount': '200.00',
+            'cardholder_name': 'Juan Pérez',
+            'card_last4': '1234'
         }
+        response = self.client.post(url, payment_data, format='json')
         
-        url = reverse('Product-list')
-        response = self.client.post(url, product_data, format='json')
+        print(f"Respuesta de pago: {response.status_code}")
+        print(f"Contenido de la respuesta: {response.data}")
         
+        # Verificar que el pago se procesó exitosamente
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Verificar que el proyecto se actualizó
+        project.refresh_from_db()
+        self.assertEqual(project.paid_amount, Decimal('200.00'))
+        self.assertEqual(project.status, 'in_progress')
+        
+        # Verificar que se creó el pago
+        self.assertTrue(Payment.objects.filter(project=project).exists())
+        
+        print("Pago simulado exitoso")
+    
+    def test_6_project_messages(self):
+        """Prueba 6: Envío de mensajes en el proyecto"""
+        print("\n=== PRUEBA 6: MENSAJES DEL PROYECTO ===")
+        
+        # Crear proyecto con diseñador asignado
+        project = Project.objects.create(
+            title='Logo para mi empresa',
+            brief='Diseño de logo moderno',
+            client=self.client_user,
+            assigned_to=self.designer_user,
+            service=self.service,
+            status='in_progress',
+            total_price=Decimal('200.00'),
+            paid_amount=Decimal('200.00')
+        )
+        
+        # Login como diseñador
+        self.client.force_authenticate(user=self.designer_user)
+        
+        # Enviar mensaje
+        url = reverse('project-messages-list', kwargs={'project_pk': project.id})
+        message_data = {
+            'message': 'Hola, he comenzado a trabajar en tu logo. ¿Te parece bien esta dirección?'
+        }
+        response = self.client.post(url, message_data, format='json')
+        
+        print(f"Respuesta de mensaje: {response.status_code}")
+        print(f"Contenido de la respuesta: {response.data}")
+        
+        # Verificar que el mensaje se envió exitosamente
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertFalse(response.data['is_active'])
-        print("Producto marcado como inactivo (mejor práctica)")
-
-
-if __name__ == '__main__':
-    # Ejecutar pruebas específicas
-    import django
-    django.setup()
+        
+        # Verificar que el mensaje existe en la base de datos
+        self.assertTrue(ProjectMessage.objects.filter(project=project).exists())
+        
+        print("Envío de mensaje exitoso")
     
-    # Crear instancia de prueba y ejecutar
-    test_case = CoreEcommerceTestCase()
-    test_case.setUp()
+    def test_7_project_completion_flow(self):
+        """Prueba 7: Flujo completo de finalización de proyecto"""
+        print("\n=== PRUEBA 7: FINALIZACIÓN DE PROYECTO ===")
+        
+        # Crear proyecto con diseñador asignado
+        project = Project.objects.create(
+            title='Logo para mi empresa',
+            brief='Diseño de logo moderno',
+            client=self.client_user,
+            assigned_to=self.designer_user,
+            service=self.service,
+            status='in_progress',
+            total_price=Decimal('200.00'),
+            paid_amount=Decimal('200.00')
+        )
+        
+        # Paso 1: Diseñador marca como completado
+        self.client.force_authenticate(user=self.designer_user)
+        url = reverse('projects-mark-completed-by-designer', kwargs={'pk': project.id})
+        response = self.client.post(url, format='json')
+        
+        print(f"Respuesta de marcado como completado: {response.status_code}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        project.refresh_from_db()
+        self.assertEqual(project.status, 'pending_completion_confirmation')
+        
+        # Paso 2: Admin confirma finalización
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('projects-confirm-completion', kwargs={'pk': project.id})
+        response = self.client.post(url, format='json')
+        
+        print(f"Respuesta de confirmación: {response.status_code}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        project.refresh_from_db()
+        self.assertEqual(project.status, 'completed')
+        
+        print("Flujo de finalización de proyecto exitoso")
     
-    print("🚀 INICIANDO PRUEBAS DE FUNCIONALIDADES CORE")
-    print("=" * 50)
-    
-    # Ejecutar todas las pruebas
-    test_case.test_1_user_registration()
-    test_case.test_2_user_login()
-    test_case.test_3_product_creation_admin()
-    test_case.test_4_product_listing()
-    test_case.test_5_add_product_to_cart()
-    test_case.test_6_create_order_from_cart()
-    test_case.test_7_stock_management()
-    test_case.test_8_order_cancellation_stock_restoration()
-    test_case.test_9_complete_ecommerce_flow()
-    
-    print("\n" + "=" * 50)
-    print("✅ TODAS LAS PRUEBAS COMPLETADAS EXITOSAMENTE")
-    print("🎉 El sistema está listo para producción!")
+    def test_8_complete_branding_workflow(self):
+        """Prueba 8: Flujo completo de branding"""
+        print("\n=== PRUEBA 8: FLUJO COMPLETO DE BRANDING ===")
+        
+        # 1. Cliente crea cotización
+        self.client.force_authenticate(user=self.client_user)
+        quote_data = {
+            'service': self.service.id,
+            'title': 'Logo completo',
+            'description': 'Necesito logo y tarjetas de presentación',
+            'budget': '300.00'
+        }
+        url = reverse('quotes-list')
+        response = self.client.post(url, quote_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        quote_id = response.data['id']
+        
+        # 2. Admin aprueba cotización
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('quotes-approve', kwargs={'pk': quote_id})
+        response = self.client.post(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        project_id = response.data['project_id']
+        
+        # 3. Admin asigna diseñador
+        url = reverse('projects-assign-designer', kwargs={'pk': project_id})
+        response = self.client.post(url, {'designer_id': self.designer_user.id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # 4. Cliente paga
+        self.client.force_authenticate(user=self.client_user)
+        url = reverse('payments-simulate')
+        payment_data = {
+            'project_id': project_id,
+            'amount': '300.00',
+            'cardholder_name': 'Juan Pérez',
+            'card_last4': '1234'
+        }
+        response = self.client.post(url, payment_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # 5. Diseñador envía mensaje
+        self.client.force_authenticate(user=self.designer_user)
+        url = reverse('project-messages-list', kwargs={'project_pk': project_id})
+        message_data = {'message': '¡Hola! He comenzado a trabajar en tu proyecto.'}
+        response = self.client.post(url, message_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # 6. Diseñador marca como completado
+        url = reverse('projects-mark-completed-by-designer', kwargs={'pk': project_id})
+        response = self.client.post(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # 7. Admin confirma finalización
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('projects-confirm-completion', kwargs={'pk': project_id})
+        response = self.client.post(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        print("Flujo completo de branding exitoso")

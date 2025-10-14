@@ -439,6 +439,154 @@ class AdminSetRoleView(APIView):
         return Response(UserDetailSerializer(target).data, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    tags=['users'],
+    summary='Obtener información básica de usuarios',
+    description='Permite a cualquier usuario autenticado obtener información básica (nombre, username, rol) de usuarios específicos',
+    parameters=[
+        OpenApiParameter(
+            name='user_ids',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description='IDs de usuarios separados por comas (ej: 1,2,3)',
+            required=True
+        )
+    ],
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'users': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'id': {'type': 'integer'},
+                            'first_name': {'type': 'string'},
+                            'last_name': {'type': 'string'},
+                            'username': {'type': 'string'},
+                            'role': {'type': 'string'}
+                        }
+                    }
+                }
+            }
+        }
+    }
+)
+class GetUsersBasicInfoView(APIView):
+    """Endpoint para obtener información básica de usuarios específicos"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user_ids_str = request.query_params.get('user_ids')
+        if not user_ids_str:
+            return Response({"detail": "user_ids es requerido"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Parsear los IDs
+            user_ids = [int(id.strip()) for id in user_ids_str.split(',') if id.strip()]
+        except ValueError:
+            return Response({"detail": "user_ids debe contener solo números separados por comas"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Obtener usuarios
+        users = Users.objects.filter(id__in=user_ids).values('id', 'first_name', 'last_name', 'username', 'roles')
+        
+        # Convertir a formato de respuesta
+        users_data = []
+        for user in users:
+            users_data.append({
+                'id': user['id'],
+                'first_name': user['first_name'] or '',
+                'last_name': user['last_name'] or '',
+                'username': user['username'],
+                'role': user['roles']
+            })
+
+        return Response({"users": users_data}, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    tags=['users'],
+    summary='Verificar disponibilidad de nombre de usuario',
+    description='Verifica si un nombre de usuario está disponible para registro',
+    parameters=[
+        OpenApiParameter(
+            name='username',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description='Nombre de usuario a verificar',
+            required=True
+        )
+    ],
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'available': {'type': 'boolean'},
+                'username': {'type': 'string'}
+            }
+        }
+    }
+)
+class CheckUsernameAvailabilityView(APIView):
+    """Endpoint para verificar disponibilidad de username"""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        username = request.query_params.get('username')
+        if not username:
+            return Response({"detail": "username es requerido"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verificar si el username ya existe
+        exists = Users.objects.filter(username__iexact=username).exists()
+        
+        return Response({
+            "available": not exists,
+            "username": username
+        }, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    tags=['users'],
+    summary='Verificar disponibilidad de email',
+    description='Verifica si un email está disponible para registro',
+    parameters=[
+        OpenApiParameter(
+            name='email',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description='Email a verificar',
+            required=True
+        )
+    ],
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'available': {'type': 'boolean'},
+                'email': {'type': 'string'}
+            }
+        }
+    }
+)
+class CheckEmailAvailabilityView(APIView):
+    """Endpoint para verificar disponibilidad de email"""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        email = request.query_params.get('email')
+        if not email:
+            return Response({"detail": "email es requerido"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verificar si el email ya existe
+        exists = Users.objects.filter(email__iexact=email).exists()
+        
+        return Response({
+            "available": not exists,
+            "email": email
+        }, status=status.HTTP_200_OK)
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class TestView(APIView):
     """Vista de prueba para verificar que todo funciona"""

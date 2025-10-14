@@ -72,9 +72,10 @@ class UserCreateByAdminSerializer(serializers.ModelSerializer):
 class UserDetailSerializer(serializers.ModelSerializer):
     """Serializer para mostrar detalles del usuario."""
     role = serializers.CharField(source='roles', read_only=True)
+    is_admin = serializers.ReadOnlyField()
     class Meta:
         model = Users
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'phone', 'address', 'roles', 'role', 'date_joined']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'phone', 'address', 'roles', 'role', 'is_admin', 'date_joined']
         read_only_fields = ['id', 'date_joined']
 
 

@@ -20,5 +20,8 @@ urlpatterns = [
     path('admin/users/', views.AdminUserListView.as_view(), name='admin-users'),
     path('admin/designers/', views.AdminDesignersListView.as_view(), name='admin-designers'),
     path('admin/set-role/', views.AdminSetRoleView.as_view(), name='admin-set-role'),
+    path('users/basic-info/', views.GetUsersBasicInfoView.as_view(), name='users-basic-info'),
+    path('check-username/', views.CheckUsernameAvailabilityView.as_view(), name='check-username'),
+    path('check-email/', views.CheckEmailAvailabilityView.as_view(), name='check-email'),
     path('test/', views.TestView.as_view(), name='test'),
 ]

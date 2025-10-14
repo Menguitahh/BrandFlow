@@ -249,6 +249,7 @@ class Project(models.Model):
         ('payment_pending', 'Payment Pending'),
         ('in_progress', 'In Progress'),
         ('review', 'Review'),
+        ('pending_completion_confirmation', 'Pending Completion Confirmation'),
         ('delivered', 'Delivered'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
@@ -257,7 +258,7 @@ class Project(models.Model):
 
     title = models.CharField(max_length=200)
     brief = models.TextField(blank=True)
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='quote')
+    status = models.CharField(max_length=35, choices=STATUS_CHOICES, default='quote')
     priority = models.CharField(max_length=30, default='normal')
     start_date = models.DateField(null=True, blank=True)
     delivery_date = models.DateField(null=True, blank=True)
@@ -323,6 +324,8 @@ class ProjectMessage(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(Users, on_delete=models.CASCADE, related_name='project_messages')
     message = models.TextField()
+    attachment = models.FileField(upload_to='project_messages/', blank=True, null=True)
+    attachment_name = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_internal = models.BooleanField(default=False)
 
@@ -331,3 +334,20 @@ class ProjectMessage(models.Model):
 
     def __str__(self):
         return f"Msg {self.id} on {self.project_id} by {self.sender_id}"
+    
+    @property
+    def has_attachment(self):
+        return bool(self.attachment)
+    
+    @property
+    def attachment_type(self):
+        if not self.attachment:
+            return None
+        
+        file_extension = self.attachment.name.split('.')[-1].lower()
+        if file_extension in ['jpg', 'jpeg', 'png', 'gif']:
+            return 'image'
+        elif file_extension == 'pdf':
+            return 'pdf'
+        else:
+            return 'file'

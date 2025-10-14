@@ -127,11 +127,29 @@ class QuoteRequestSerializer(serializers.ModelSerializer):
 
 class ProjectMessageSerializer(serializers.ModelSerializer):
     sender = serializers.PrimaryKeyRelatedField(read_only=True)
+    attachment_url = serializers.SerializerMethodField()
+    attachment_name = serializers.CharField(read_only=True)
+    has_attachment = serializers.ReadOnlyField()
+    attachment_type = serializers.ReadOnlyField()
 
     class Meta:
         model = ProjectMessage
-        fields = ['id', 'project', 'sender', 'message', 'created_at', 'is_internal']
-        read_only_fields = ['id', 'created_at', 'sender']
+        fields = ['id', 'project', 'sender', 'message', 'attachment', 'attachment_url', 'attachment_name', 'has_attachment', 'attachment_type', 'created_at', 'is_internal']
+        read_only_fields = ['id', 'created_at', 'sender', 'attachment_name']
+
+    def get_attachment_url(self, obj):
+        if obj.attachment:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.attachment.url)
+            return obj.attachment.url
+        return None
+
+    def create(self, validated_data):
+        # Guardar el nombre original del archivo
+        if 'attachment' in validated_data and validated_data['attachment']:
+            validated_data['attachment_name'] = validated_data['attachment'].name
+        return super().create(validated_data)
 
 
 class PaymentSerializer(serializers.ModelSerializer):

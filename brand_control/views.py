@@ -1,7 +1,8 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import permissions, viewsets, status
+from rest_framework import permissions, viewsets, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
 from django.db.models import Q
 from django.utils.decorators import method_decorator
@@ -208,6 +209,69 @@ class ProjectViewSet(viewsets.ModelViewSet):
             'project': ProjectSerializer(project).data
         })
 
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def mark_completed_by_designer(self, request, pk=None):
+        """Permite al diseñador marcar el proyecto como completado (requiere confirmación del admin)"""
+        project = self.get_object()
+        user = request.user
+        
+        # Solo el diseñador asignado puede marcar como completado
+        if not (hasattr(user, 'is_designer') and user.is_designer and project.assigned_to == user):
+            return Response({'detail': 'Solo el diseñador asignado puede marcar como completado'}, 
+                          status=status.HTTP_403_FORBIDDEN)
+        
+        # Solo proyectos en progreso pueden ser marcados como completados
+        if project.status != 'in_progress':
+            return Response({'detail': 'Solo proyectos en progreso pueden ser marcados como completados'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        # Cambiar estado a pendiente de confirmación
+        project.status = 'pending_completion_confirmation'
+        project.save()
+        
+        return Response({
+            'message': 'Proyecto marcado como completado. Esperando confirmación del administrador.',
+            'project': ProjectSerializer(project).data
+        })
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsAdmin])
+    def confirm_completion(self, request, pk=None):
+        """Permite al admin confirmar que un proyecto está completado"""
+        project = self.get_object()
+        
+        # Solo proyectos pendientes de confirmación pueden ser confirmados
+        if project.status != 'pending_completion_confirmation':
+            return Response({'detail': 'Solo proyectos pendientes de confirmación pueden ser confirmados'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        # Cambiar estado a completado
+        project.status = 'completed'
+        project.save()
+        
+        return Response({
+            'message': 'Proyecto confirmado como completado exitosamente.',
+            'project': ProjectSerializer(project).data
+        })
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsAdmin])
+    def mark_completed_by_admin(self, request, pk=None):
+        """Permite al admin marcar directamente un proyecto como completado"""
+        project = self.get_object()
+        
+        # Solo proyectos en progreso pueden ser marcados como completados
+        if project.status not in ['in_progress', 'pending_completion_confirmation']:
+            return Response({'detail': 'Solo proyectos en progreso pueden ser marcados como completados'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        # Cambiar estado a completado directamente
+        project.status = 'completed'
+        project.save()
+        
+        return Response({
+            'message': 'Proyecto marcado como completado por el administrador.',
+            'project': ProjectSerializer(project).data
+        })
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ProjectMessageViewSet(viewsets.ModelViewSet):
@@ -233,7 +297,20 @@ class ProjectMessageViewSet(viewsets.ModelViewSet):
         user = self.request.user
         is_admin = hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin)
         if not is_admin and project.client_id != user.id and (project.assigned_to_id or 0) != user.id:
-            raise permissions.PermissionDenied('No autorizado para comentar en este proyecto')
+            raise PermissionDenied('No autorizado para comentar en este proyecto')
+        
+        # Validar archivo si existe
+        if 'attachment' in self.request.data and self.request.data['attachment']:
+            attachment = self.request.data['attachment']
+            # Validar tipo de archivo
+            allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf']
+            if attachment.content_type not in allowed_types:
+                raise serializers.ValidationError({'attachment': 'Solo se permiten archivos JPG, PNG, GIF y PDF'})
+            
+            # Validar tamaño (máximo 10MB)
+            if attachment.size > 10 * 1024 * 1024:
+                raise serializers.ValidationError({'attachment': 'El archivo no puede ser mayor a 10MB'})
+        
         serializer.save(sender=user)
 
 
@@ -268,8 +345,9 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
 
         try:
-            amount_val = float(amount)
-        except ValueError:
+            from decimal import Decimal
+            amount_val = Decimal(str(amount))
+        except (ValueError, TypeError):
             return Response({'detail': 'amount inválido'}, status=status.HTTP_400_BAD_REQUEST)
         if amount_val <= 0:
             return Response({'detail': 'amount debe ser > 0'}, status=status.HTTP_400_BAD_REQUEST)
@@ -283,8 +361,8 @@ class PaymentViewSet(viewsets.ModelViewSet):
             card_last4=card_last4[:4]
         )
         # actualizar proyecto
-        project.paid_amount = (project.paid_amount or 0) + amount_val
-        if project.status in ['payment_pending', 'approved'] and project.paid_amount >= float(project.total_price):
+        project.paid_amount = (project.paid_amount or Decimal('0')) + amount_val
+        if project.status in ['payment_pending', 'approved'] and project.paid_amount >= project.total_price:
             project.status = 'in_progress'
         project.save()
         return Response({

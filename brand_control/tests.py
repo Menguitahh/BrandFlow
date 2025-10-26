@@ -8,9 +8,6 @@ from decimal import Decimal
 import json
 
 from .models import ServiceCategory, Service, Project, QuoteRequest, Payment, ProjectMessage
-from user_control.models import Users
-
-User = get_user_model()
 
 
 class BrandingTestCase(APITestCase):
@@ -19,7 +16,7 @@ class BrandingTestCase(APITestCase):
     def setUp(self):
         """Configuración inicial para todas las pruebas"""
         # Crear usuario admin
-        self.admin_user = Users.objects.create_user(
+        self.admin_user = User.objects.create_user(
             username='admin',
             email='admin@test.com',
             password='admin123',
@@ -27,7 +24,7 @@ class BrandingTestCase(APITestCase):
         )
         
         # Crear usuario cliente
-        self.client_user = Users.objects.create_user(
+        self.client_user = User.objects.create_user(
             username='cliente',
             email='cliente@test.com',
             password='cliente123',
@@ -35,7 +32,7 @@ class BrandingTestCase(APITestCase):
         )
         
         # Crear usuario diseñador
-        self.designer_user = Users.objects.create_user(
+        self.designer_user = User.objects.create_user(
             username='diseñador',
             email='diseñador@test.com',
             password='diseñador123',

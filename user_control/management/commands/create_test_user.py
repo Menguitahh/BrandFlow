@@ -1,5 +1,7 @@
 from django.core.management.base import BaseCommand
-from user_control.models import Users
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class Command(BaseCommand):
     help = 'Crea un usuario de prueba para testing'
@@ -31,14 +33,14 @@ class Command(BaseCommand):
 
         try:
             # Verificar si el usuario ya existe
-            if Users.objects.filter(username=username).exists():
+            if User.objects.filter(username=username).exists():
                 self.stdout.write(
                     self.style.WARNING(f'Usuario {username} ya existe')
                 )
                 return
 
             # Crear usuario de prueba
-            user = Users.objects.create_user(
+            user = User.objects.create_user(
                 username=username,
                 email=email,
                 password=password,

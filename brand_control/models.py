@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from user_control.models import Users
+from django.conf import settings
 from django.core.validators import MinValueValidator
 
 
@@ -50,8 +50,8 @@ class Project(models.Model):
     delivery_date = models.DateField(null=True, blank=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], default=0)
     paid_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    client = models.ForeignKey(Users, on_delete=models.CASCADE, related_name='projects')
-    assigned_to = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_projects')
+    client = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='projects')
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_projects')
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='projects')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -67,7 +67,7 @@ class QuoteRequest(models.Model):
         ('rejected', 'Rejected'),
     ]
 
-    client = models.ForeignKey(Users, on_delete=models.CASCADE, related_name='quote_requests')
+    client = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='quote_requests')
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='quote_requests')
     title = models.CharField(max_length=200)
     description = models.TextField()
@@ -75,7 +75,7 @@ class QuoteRequest(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    approved_by = models.ForeignKey(Users, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_quotes')
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_quotes')
     approved_at = models.DateTimeField(null=True, blank=True)
     rejected_reason = models.TextField(null=True, blank=True)
     linked_project = models.ForeignKey('Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='from_quote')
@@ -108,7 +108,7 @@ class Payment(models.Model):
 
 class ProjectMessage(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='messages')
-    sender = models.ForeignKey(Users, on_delete=models.CASCADE, related_name='project_messages')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='project_messages')
     message = models.TextField()
     attachment = models.FileField(upload_to='project_messages/', blank=True, null=True)
     attachment_name = models.CharField(max_length=255, blank=True, null=True)

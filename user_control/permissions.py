@@ -1,5 +1,7 @@
 from rest_framework.permissions import BasePermission
-from user_control.models import Users
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class IsAdminUserCustom(BasePermission):
     """Permiso personalizado para verificar si el usuario es administrador"""

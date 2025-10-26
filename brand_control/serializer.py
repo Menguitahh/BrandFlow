@@ -2,7 +2,9 @@ from rest_framework import serializers
 from .models import (
     ServiceCategory, Service, Project, QuoteRequest, Payment, ProjectMessage
 )
-from user_control.models import Users
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class ServiceCategorySerializer(serializers.ModelSerializer):
@@ -22,7 +24,7 @@ class ServiceSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     client = serializers.PrimaryKeyRelatedField(read_only=True)
-    assigned_to = serializers.PrimaryKeyRelatedField(queryset=Users.objects.all(), allow_null=True, required=False)
+    assigned_to = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), allow_null=True, required=False)
     service = serializers.PrimaryKeyRelatedField(queryset=Service.objects.all())
 
     class Meta:
@@ -48,8 +50,8 @@ class QuoteRequestSerializer(serializers.ModelSerializer):
             client = request.data.get('client')
             if client:
                 try:
-                    client_obj = Users.objects.get(id=client)
-                except Users.DoesNotExist:
+                    client_obj = User.objects.get(id=client)
+                except User.DoesNotExist:
                     raise serializers.ValidationError({'client': 'Cliente no encontrado'})
                 return QuoteRequest.objects.create(client=client_obj, **validated_data)
         # por defecto, cliente autenticado

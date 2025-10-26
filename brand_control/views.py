@@ -15,8 +15,10 @@ from .serializer import (
 from .models import (
     ServiceCategory, Service, Project, QuoteRequest, Payment, ProjectMessage
 )
-from user_control.models import Users
+from django.contrib.auth import get_user_model
 from user_control.permissions import IsAdminUserCustom, IsAdmin, IsDesigner, IsProjectParticipant
+
+User = get_user_model()
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -148,11 +150,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
                           status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            designer = Users.objects.get(id=designer_id)
+            designer = User.objects.get(id=designer_id)
             if not (hasattr(designer, 'is_designer') and designer.is_designer):
                 return Response({'detail': 'El usuario seleccionado no es un diseñador'}, 
                               status=status.HTTP_400_BAD_REQUEST)
-        except Users.DoesNotExist:
+        except User.DoesNotExist:
             return Response({'detail': 'Diseñador no encontrado'}, 
                           status=status.HTTP_404_NOT_FOUND)
         

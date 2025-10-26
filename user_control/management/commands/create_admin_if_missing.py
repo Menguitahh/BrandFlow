@@ -1,7 +1,9 @@
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from user_control.models import Users
+from django.contrib.auth import get_user_model
 from brand_control.models import ServiceCategory, Service
+
+User = get_user_model()
 
 
 class Command(BaseCommand):
@@ -11,7 +13,7 @@ class Command(BaseCommand):
         admin_username = 'admin'
         admin_pass = getattr(settings, 'ADMIN_PASS', None) or 'Admin123!'
 
-        admin, created = Users.objects.get_or_create(username=admin_username, defaults={
+        admin, created = User.objects.get_or_create(username=admin_username, defaults={
             'email': 'admin@example.com',
             'roles': 'admin'
         })

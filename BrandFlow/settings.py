@@ -239,15 +239,18 @@ STORAGES = {
     },
 }
 # Cookie settings - Automático según entorno
-SESSION_COOKIE_SECURE = not DEBUG  # True en producción con HTTPS
+# En producción (Railway), las cookies deben ser Secure y SameSite=None para funcionar cross-domain
+is_production = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('ENVIRONMENT') == 'production'
+SESSION_COOKIE_SECURE = True  # Siempre True en Railway que usa HTTPS
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_AGE = 3600  # 1 hora en segundos
+SESSION_COOKIE_SAMESITE = 'None'  # Permitir cross-domain
+SESSION_COOKIE_DOMAIN = None  # Permitir que Railsy maneje el dominio
+SESSION_COOKIE_AGE = 3600 * 24  # 24 horas en segundos
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
-CSRF_COOKIE_SECURE = not DEBUG  # True en producción con HTTPS
+CSRF_COOKIE_SECURE = True  # Siempre True en Railway que usa HTTPS
 CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'None'  # Permitir cross-domain
 CSRF_USE_SESSIONS = True
 
 # Configuración de sesiones

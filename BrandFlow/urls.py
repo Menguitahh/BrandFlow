@@ -25,6 +25,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from brand_control import views as brand_views
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('brand_control.urls')),
@@ -34,6 +36,9 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('api/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    # Rutas manuales para mensajes de proyecto
+    path('api/branding/projects/<int:project_pk>/messages/', brand_views.ProjectMessageViewSet.as_view({'get': 'list', 'post': 'create'}), name='project-messages-list'),
+    path('api/branding/projects/<int:project_pk>/messages/<int:pk>/', brand_views.ProjectMessageViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='project-messages-detail'),
 ]
 
 # Configuración para archivos estáticos y medios en desarrollo

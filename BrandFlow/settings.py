@@ -139,10 +139,10 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3001',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
-    "https://*.railway.app",
     "https://brandfloow.netlify.app",
     "https://BrandFlow.railway.app",
-    "https://brandflow-production-64a5.up.railway.app"
+    "https://brandflow-production-64a5.up.railway.app/api",
+    "https://brandflow-production-64a5.up.railway.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
 AUTH_USER_MODEL = 'user_control.Users'

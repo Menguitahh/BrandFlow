@@ -71,7 +71,7 @@ class QuoteRequestSerializer(serializers.ModelSerializer):
 
 
 class ProjectMessageSerializer(serializers.ModelSerializer):
-    sender = serializers.PrimaryKeyRelatedField(read_only=True)
+    sender = serializers.SerializerMethodField()
     attachment_url = serializers.SerializerMethodField()
     attachment_name = serializers.CharField(read_only=True)
     has_attachment = serializers.ReadOnlyField()
@@ -81,6 +81,16 @@ class ProjectMessageSerializer(serializers.ModelSerializer):
         model = ProjectMessage
         fields = ['id', 'project', 'sender', 'message', 'attachment', 'attachment_url', 'attachment_name', 'has_attachment', 'attachment_type', 'created_at', 'is_internal']
         read_only_fields = ['id', 'created_at', 'sender', 'attachment_name']
+
+    def get_sender(self, obj):
+        """Devolver información del remitente"""
+        return {
+            'id': obj.sender.id,
+            'username': obj.sender.username,
+            'first_name': obj.sender.first_name or '',
+            'last_name': obj.sender.last_name or '',
+            'email': obj.sender.email
+        }
 
     def get_attachment_url(self, obj):
         if obj.attachment:

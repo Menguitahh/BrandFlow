@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.db.models import Q, F
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from decimal import Decimal
 
 from .serializer import (
     ServiceCategorySerializer, ServiceSerializer, ProjectSerializer, QuoteRequestSerializer,
@@ -149,17 +150,28 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'designer_id es requerido'}, 
                           status=status.HTTP_400_BAD_REQUEST)
         
+        # Verificar permisos - solo admin puede asignar diseñadores
+        user = request.user
+        if not (hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin)):
+            return Response({'detail': 'Solo los administradores pueden asignar diseñadores'}, 
+                          status=status.HTTP_403_FORBIDDEN)
+        
         try:
             designer = User.objects.get(id=designer_id)
-            if not (hasattr(designer, 'is_designer') and designer.is_designer):
+            
+            # Verificar que el usuario es un diseñador
+            if designer.roles != 'diseñador':
                 return Response({'detail': 'El usuario seleccionado no es un diseñador'}, 
                               status=status.HTTP_400_BAD_REQUEST)
+            
         except User.DoesNotExist:
             return Response({'detail': 'Diseñador no encontrado'}, 
                           status=status.HTTP_404_NOT_FOUND)
         
+        # Asignar diseñador y actualizar estado
         project.assigned_to = designer
-        project.status = 'in_progress'
+        if project.status == 'approved':
+            project.status = 'in_progress'
         project.save()
         
         return Response({
@@ -230,18 +242,55 @@ class ProjectMessageViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated()]
     
     def get_queryset(self):
+        """Obtener mensajes filtrados por proyecto"""
         project_id = self.kwargs.get('project_pk')
-        if project_id:
+        if not project_id:
+            return ProjectMessage.objects.none()
+        
+        # Verificar que el proyecto existe
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return ProjectMessage.objects.none()
+        
+        # Verificar permisos: cliente, diseñador asignado o admin pueden ver los mensajes
+        user = self.request.user
+        can_access = False
+        
+        if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
+            can_access = True
+        elif project.client_id == user.id:
+            can_access = True
+        elif project.assigned_to_id == user.id:
+            can_access = True
+        
+        if can_access:
             return ProjectMessage.objects.filter(project_id=project_id).order_by('created_at')
+        
         return ProjectMessage.objects.none()
     
     def perform_create(self, serializer):
+        """Crear mensaje con validación de permisos"""
         project_id = self.kwargs.get('project_pk')
-        if project_id:
-            project = get_object_or_404(Project, id=project_id)
-            serializer.save(sender=self.request.user, project=project)
-        else:
-            serializer.save(sender=self.request.user)
+        if not project_id:
+            raise serializers.ValidationError({'project': 'ID de proyecto requerido'})
+        
+        project = get_object_or_404(Project, id=project_id)
+        user = self.request.user
+        
+        # Verificar permisos
+        can_send = False
+        if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
+            can_send = True
+        elif project.client_id == user.id:
+            can_send = True
+        elif project.assigned_to_id == user.id:
+            can_send = True
+        
+        if not can_send:
+            raise PermissionDenied('No tienes permiso para enviar mensajes en este proyecto')
+        
+        serializer.save(sender=self.request.user, project=project)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -258,7 +307,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
     def simulate(self, request):
         """Simular pago de proyecto o cotización aprobada"""
         project_id = request.data.get('project_id')
-        quote_id = request.data.get('quote_id')  # Nueva opción: pagar desde cotización
+        quote_id = request.data.get('quote_id')
         amount = request.data.get('amount')
         
         if not amount:
@@ -269,49 +318,28 @@ class PaymentViewSet(viewsets.ModelViewSet):
         if project_id:
             try:
                 project = Project.objects.get(id=project_id)
+                
+                # Verificar que el proyecto pertenece al usuario actual
+                if project.client_id != request.user.id and not (hasattr(request.user, 'is_admin') and (request.user.is_admin() if callable(request.user.is_admin) else request.user.is_admin)):
+                    return Response({'detail': 'No tienes permiso para pagar este proyecto'}, 
+                                  status=status.HTTP_403_FORBIDDEN)
+                
+                # Actualizar el proyecto con el pago
+                project.paid_amount = (project.paid_amount or 0) + Decimal(str(amount))
+                project.status = 'in_progress'
+                project.save()
+                
             except Project.DoesNotExist:
                 return Response({'detail': 'Proyecto no encontrado'}, 
                               status=status.HTTP_404_NOT_FOUND)
+        
         # Si tenemos quote_id, crear proyecto desde cotización y pagar
         elif quote_id:
             try:
                 quote = QuoteRequest.objects.get(id=quote_id, client=request.user)
-                # Crear proyecto desde cotización si no existe
-                project, created = Project.objects.get_or_create(
-                    title=quote.title,
-                    client=quote.client,
-                    service=quote.service,
-                    defaults={
-                        'brief': quote.description,
-                        'total_price': quote.budget or amount,
-                        'status': 'approved'
-                    }
-                )
                 
-                if created:
-                    quote.linked_project = project
-                    quote.save()
-                
-            except QuoteRequest.DoesNotExist:
-                return Response({'detail': 'Cotización no encontrada'}, 
-                              status=status.HTTP_404_NOT_FOUND)
-        else:
-            # Buscar proyecto pendiente de pago del cliente
-            project = Project.objects.filter(
-                client=request.user,
-                status__in=['approved', 'payment_pending'],
-                paid_amount__lt=F('total_price')
-            ).first()
-            
-            if not project:
-                # Si no hay proyecto, buscar la cotización reciente más grande y crear proyecto
-                quote = QuoteRequest.objects.filter(
-                    client=request.user,
-                    status='approved'
-                ).order_by('-created_at').first()
-                
-                if quote:
-                    # Crear proyecto desde cotización
+                # Crear proyecto desde cotización si no tiene uno vinculado
+                if not quote.linked_project:
                     project = Project.objects.create(
                         title=quote.title,
                         client=quote.client,
@@ -324,9 +352,20 @@ class PaymentViewSet(viewsets.ModelViewSet):
                     quote.linked_project = project
                     quote.save()
                 else:
-                    return Response({
-                        'detail': 'No se encontró ningún proyecto o cotización pendiente de pago para este cliente'
-                    }, status=status.HTTP_404_NOT_FOUND)
+                    project = quote.linked_project
+                
+                # Procesar el pago
+                project.paid_amount = amount
+                project.status = 'in_progress'
+                project.save()
+                
+            except QuoteRequest.DoesNotExist:
+                return Response({'detail': 'Cotización no encontrada'}, 
+                              status=status.HTTP_404_NOT_FOUND)
+        
+        else:
+            return Response({'detail': 'Se requiere project_id o quote_id'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
         
         # Crear pago simulado
         payment = Payment.objects.create(
@@ -337,11 +376,6 @@ class PaymentViewSet(viewsets.ModelViewSet):
             cardholder_name=request.data.get('cardholder_name', ''),
             card_last4=request.data.get('card_last4', '')
         )
-        
-        # Actualizar proyecto
-        project.paid_amount = amount
-        project.status = 'in_progress'
-        project.save()
         
         return Response({
             'message': 'Pago simulado exitoso',

@@ -10,19 +10,27 @@ class Command(BaseCommand):
     help = 'Crea un usuario admin por defecto y datos de servicios si no existen'
 
     def handle(self, *args, **options):
-        admin_username = 'admin'
-        admin_pass = getattr(settings, 'ADMIN_PASS', None) or 'Admin123!'
+        # Crear usuario Admin con las credenciales específicas
+        admin_username = 'Admin'
+        admin_email = 'BrandFlow@gmail.com'
+        admin_pass = 'Menga22!'
 
         admin, created = User.objects.get_or_create(username=admin_username, defaults={
-            'email': 'admin@example.com',
+            'email': admin_email,
             'roles': 'admin'
         })
+        
         if created:
             admin.set_password(admin_pass)
             admin.save()
-            self.stdout.write(self.style.SUCCESS(f"Admin creado: {admin_username}/{admin_pass}"))
+            self.stdout.write(self.style.SUCCESS(f"✅ Admin creado: {admin_username}/{admin_pass} ({admin_email})"))
         else:
-            self.stdout.write(self.style.WARNING("Admin ya existe"))
+            # Si ya existe, actualizar password en caso de que haya cambiado
+            admin.set_password(admin_pass)
+            admin.email = admin_email
+            admin.roles = 'admin'
+            admin.save()
+            self.stdout.write(self.style.SUCCESS(f"✅ Admin actualizado: {admin_username}/{admin_pass} ({admin_email})"))
 
         # Crear categorías de branding
         categories_data = [

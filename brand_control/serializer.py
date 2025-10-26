@@ -45,6 +45,18 @@ class QuoteRequestSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context['request']
         user = request.user
+        
+        # Convertir service a entero si viene como lista o string
+        if 'service' in validated_data:
+            service = validated_data['service']
+            if isinstance(service, list):
+                validated_data['service'] = service[0] if len(service) > 0 else service
+            elif isinstance(service, str):
+                try:
+                    validated_data['service'] = int(service)
+                except (ValueError, TypeError):
+                    raise serializers.ValidationError({'service': 'ID de servicio inválido'})
+        
         if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
             # admin puede crear en nombre de un cliente si se pasó 'client'
             client = request.data.get('client')

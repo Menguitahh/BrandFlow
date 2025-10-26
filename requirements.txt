@@ -10,7 +10,7 @@ drf-spectacular==0.28.0
 inflection==0.5.1
 jsonschema==4.23.0
 jsonschema-specifications==2024.10.1
-mysqlclient==2.2.7
+PyMySQL==1.1.1
 pillow==11.2.1
 pycparser==2.22
 PyJWT==2.9.0

@@ -107,9 +107,10 @@ DATABASES = {
 if 'MYSQL_URL' in os.environ and 'DATABASE_URL' not in os.environ:
     import re
     mysql_url = os.environ.get('MYSQL_URL')
-    if mysql_url and not mysql_url.startswith('mysql://'):
+    if mysql_url:
         # Parsear el formato MYSQL_URL
-        match = re.match(r'mysql://(\w+):([^@]+)@([^:]+):(\d+)/(\w+)', mysql_url)
+        # Formato esperado: mysql://usuario:password@host:puerto/database
+        match = re.match(r'mysql://([^:]+):([^@]+)@([^:]+):(\d+)/(\w+)', mysql_url)
         if match:
             username, password, host, port, database = match.groups()
             DATABASES['default'] = {

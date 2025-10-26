@@ -1,7 +1,9 @@
 from django.urls import path, include
 from rest_framework import routers
 from user_control import views
-
+from django.urls import path
+from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
 app_name = 'user_control'
 router = routers.DefaultRouter()
 router.register(r'register', views.UserRegisterView, basename='register')

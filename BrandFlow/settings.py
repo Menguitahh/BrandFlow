@@ -27,7 +27,20 @@ SECRET_KEY = os.getenv('SECRET_KEY') or 'vdhg%DRS&56ASD&A&%Drfsavda!'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
 
-ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOSTS')]
+# Configurar ALLOWED_HOSTS para desarrollo y producción
+ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS', '')
+if ALLOWED_HOSTS_ENV:
+    ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',')]
+else:
+    ALLOWED_HOSTS = [
+        'localhost',
+        '127.0.0.1',
+        'testserver',
+        'brandflow-production-64a5.up.railway.app',
+        'BrandFlow.railway.app',
+        '*.railway.app',
+        'brandfloow.netlify.app',
+    ]
 
 
 INSTALLED_APPS = [
@@ -46,6 +59,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Para archivos estáticos en producción
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -53,8 +67,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'user_control.middleware.SessionMiddleware',  # Middleware personalizado para sesiones
-    'user_control.middleware.CSRFMiddleware',  # Middleware personalizado para CSRF
     'BrandFlow.middleware.DisableCSRFMiddleware',  # Deshabilitar CSRF en APIs
 ]
 
@@ -84,12 +96,35 @@ WSGI_APPLICATION = 'BrandFlow.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        # 2. Le decimos que busque la variable 'MYSQL_URL' de tu captura
-        default=os.environ.get('MYSQL_URL'),
+        env='DATABASE_URL',  # Railway usa DATABASE_URL por defecto
+        default=os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL'),
         conn_max_age=600,
         conn_health_checks=True,
     )
 }
+
+# Si no hay DATABASE_URL pero hay MYSQL_URL, configurar manualmente
+if 'MYSQL_URL' in os.environ and 'DATABASE_URL' not in os.environ:
+    import re
+    mysql_url = os.environ.get('MYSQL_URL')
+    if mysql_url and not mysql_url.startswith('mysql://'):
+        # Parsear el formato MYSQL_URL
+        match = re.match(r'mysql://(\w+):([^@]+)@([^:]+):(\d+)/(\w+)', mysql_url)
+        if match:
+            username, password, host, port, database = match.groups()
+            DATABASES['default'] = {
+                'ENGINE': 'django.db.backends.mysql',
+                'NAME': database,
+                'USER': username,
+                'PASSWORD': password,
+                'HOST': host,
+                'PORT': port,
+                'OPTIONS': {
+                    'charset': 'utf8mb4',
+                    'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                    'autocommit': True,
+                },
+            }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -132,6 +167,16 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 ROOT_URLCONF = "BrandFlow.urls"
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "https://brandflow-production-64a5.up.railway.app",
+    "https://BrandFlow.railway.app",
+    "https://*.railway.app",
+    "https://brandfloow.netlify.app",
+]
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
@@ -192,35 +237,24 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
-# Cookie settings optimizados para desarrollo
-SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+# Cookie settings - Automático según entorno
+SESSION_COOKIE_SECURE = not DEBUG  # True en producción con HTTPS
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_AGE = 3600  # 1 hora en segundos
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
-CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_COOKIE_SECURE = not DEBUG  # True en producción con HTTPS
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'
-
-# CSRF settings para desarrollo
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
 CSRF_USE_SESSIONS = True
-CSRF_COOKIE_SECURE = False
-CSRF_COOKIE_HTTPONLY = False  # Permitir acceso desde JavaScript en desarrollo
-CSRF_COOKIE_SAMESITE = 'Lax'
 
 # Configuración de sesiones
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_SAVE_EVERY_REQUEST = True
 
 # Deshabilitar CSRF para APIs REST (solo para desarrollo)
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
+
 
 # Middleware personalizado para deshabilitar CSRF en APIs
 MIDDLEWARE_CSRF_EXEMPT = [

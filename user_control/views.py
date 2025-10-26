@@ -62,8 +62,11 @@ class UserRegisterView(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         
-        # Login automático después del registro para establecer sesión
-        login(request, user)
+        # Importar aquí para evitar importaciones circulares
+        from rest_framework_simplejwt.tokens import RefreshToken
+        
+        # Crear tokens JWT
+        refresh = RefreshToken.for_user(user)
         
         detail = UserDetailSerializer(user, context={'request': request})
         headers = self.get_success_headers(detail.data)
@@ -71,7 +74,8 @@ class UserRegisterView(viewsets.ModelViewSet):
         return Response({
             "message": "Usuario registrado e iniciado sesión exitosamente",
             "user": detail.data,
-            "session_id": request.session.session_key,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
         }, status=status.HTTP_201_CREATED, headers=headers)
 
 
@@ -145,7 +149,11 @@ class LoginView(APIView):
             user = authenticate(request, username=user_obj.username, password=password)
 
             if user and user.is_active:
-                login(request, user)
+                # Importar aquí para evitar importaciones circulares
+                from rest_framework_simplejwt.tokens import RefreshToken
+                
+                # Crear tokens JWT
+                refresh = RefreshToken.for_user(user)
                 
                 # Serializar datos del usuario para la respuesta
                 serializer = UserDetailSerializer(user)
@@ -153,7 +161,8 @@ class LoginView(APIView):
                 return Response({
                     "message": "Login exitoso",
                     "user": serializer.data,
-                    "session_id": request.session.session_key,
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
                 }, status=status.HTTP_200_OK)
             else:
                 return Response(

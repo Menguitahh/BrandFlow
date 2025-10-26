@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, F
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
@@ -253,19 +253,57 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def simulate(self, request):
-        """Simular pago de proyecto"""
+        """Simular pago de proyecto o cotización aprobada"""
         project_id = request.data.get('project_id')
+        quote_id = request.data.get('quote_id')  # Nueva opción: pagar desde cotización
         amount = request.data.get('amount')
         
-        if not project_id or not amount:
-            return Response({'detail': 'project_id y amount son requeridos'}, 
+        if not amount:
+            return Response({'detail': 'amount es requerido'}, 
                           status=status.HTTP_400_BAD_REQUEST)
         
-        try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
-            return Response({'detail': 'Proyecto no encontrado'}, 
-                          status=status.HTTP_404_NOT_FOUND)
+        # Si tenemos project_id, pagar el proyecto
+        if project_id:
+            try:
+                project = Project.objects.get(id=project_id)
+            except Project.DoesNotExist:
+                return Response({'detail': 'Proyecto no encontrado'}, 
+                              status=status.HTTP_404_NOT_FOUND)
+        # Si tenemos quote_id, crear proyecto desde cotización y pagar
+        elif quote_id:
+            try:
+                quote = QuoteRequest.objects.get(id=quote_id, client=request.user)
+                # Crear proyecto desde cotización si no existe
+                project, created = Project.objects.get_or_create(
+                    title=quote.title,
+                    client=quote.client,
+                    service=quote.service,
+                    defaults={
+                        'brief': quote.description,
+                        'total_price': quote.budget or amount,
+                        'status': 'approved'
+                    }
+                )
+                
+                if created:
+                    quote.linked_project = project
+                    quote.save()
+                
+            except QuoteRequest.DoesNotExist:
+                return Response({'detail': 'Cotización no encontrada'}, 
+                              status=status.HTTP_404_NOT_FOUND)
+        else:
+            # Buscar proyecto pendiente de pago del cliente
+            project = Project.objects.filter(
+                client=request.user,
+                status__in=['approved', 'payment_pending'],
+                paid_amount__lt=F('total_price')
+            ).first()
+            
+            if not project:
+                return Response({
+                    'detail': 'No se encontró ningún proyecto pendiente de pago para este cliente'
+                }, status=status.HTTP_404_NOT_FOUND)
         
         # Crear pago simulado
         payment = Payment.objects.create(

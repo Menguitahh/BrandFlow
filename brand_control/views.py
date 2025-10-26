@@ -227,13 +227,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
 @method_decorator(csrf_exempt, name='dispatch')
 class ProjectMessageViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectMessageSerializer
+    permission_classes = [permissions.IsAuthenticated()]
     
     def get_queryset(self):
         project_id = self.kwargs.get('project_pk')
-        return ProjectMessage.objects.filter(project_id=project_id).order_by('created_at')
-    
-    def get_permissions(self):
-        return [permissions.IsAuthenticated()]
+        if project_id:
+            return ProjectMessage.objects.filter(project_id=project_id).order_by('created_at')
+        return ProjectMessage.objects.none()
     
     def perform_create(self, serializer):
         project_id = self.kwargs.get('project_pk')

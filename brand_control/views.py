@@ -304,9 +304,29 @@ class PaymentViewSet(viewsets.ModelViewSet):
             ).first()
             
             if not project:
-                return Response({
-                    'detail': 'No se encontró ningún proyecto pendiente de pago para este cliente'
-                }, status=status.HTTP_404_NOT_FOUND)
+                # Si no hay proyecto, buscar la cotización reciente más grande y crear proyecto
+                quote = QuoteRequest.objects.filter(
+                    client=request.user,
+                    status='approved'
+                ).order_by('-created_at').first()
+                
+                if quote:
+                    # Crear proyecto desde cotización
+                    project = Project.objects.create(
+                        title=quote.title,
+                        client=quote.client,
+                        service=quote.service,
+                        brief=quote.description,
+                        total_price=quote.budget or amount,
+                        status='approved',
+                        paid_amount=0
+                    )
+                    quote.linked_project = project
+                    quote.save()
+                else:
+                    return Response({
+                        'detail': 'No se encontró ningún proyecto o cotización pendiente de pago para este cliente'
+                    }, status=status.HTTP_404_NOT_FOUND)
         
         # Crear pago simulado
         payment = Payment.objects.create(

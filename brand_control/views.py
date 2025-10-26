@@ -259,9 +259,9 @@ class ProjectMessageViewSet(viewsets.ModelViewSet):
         
         if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
             can_access = True
-        elif project.client_id == user.id:
+        elif project.client.id == user.id:
             can_access = True
-        elif project.assigned_to_id == user.id:
+        elif project.assigned_to and project.assigned_to.id == user.id:
             can_access = True
         
         if can_access:
@@ -282,9 +282,9 @@ class ProjectMessageViewSet(viewsets.ModelViewSet):
         can_send = False
         if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
             can_send = True
-        elif project.client_id == user.id:
+        elif project.client.id == user.id:
             can_send = True
-        elif project.assigned_to_id == user.id:
+        elif project.assigned_to and project.assigned_to.id == user.id:
             can_send = True
         
         if not can_send:
@@ -320,7 +320,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 project = Project.objects.get(id=project_id)
                 
                 # Verificar que el proyecto pertenece al usuario actual
-                if project.client_id != request.user.id and not (hasattr(request.user, 'is_admin') and (request.user.is_admin() if callable(request.user.is_admin) else request.user.is_admin)):
+                if project.client.id != request.user.id and not (hasattr(request.user, 'is_admin') and (request.user.is_admin() if callable(request.user.is_admin) else request.user.is_admin)):
                     return Response({'detail': 'No tienes permiso para pagar este proyecto'}, 
                                   status=status.HTTP_403_FORBIDDEN)
                 

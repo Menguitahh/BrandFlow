@@ -141,7 +141,6 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:3001',
     "https://brandfloow.netlify.app",
     "https://BrandFlow.railway.app",
-    "https://brandflow-production-64a5.up.railway.app/api",
     "https://brandflow-production-64a5.up.railway.app",
 ]
 CORS_ALLOW_CREDENTIALS = True

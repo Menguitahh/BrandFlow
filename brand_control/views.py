@@ -247,49 +247,15 @@ class ProjectMessageViewSet(viewsets.ModelViewSet):
         if not project_id:
             return ProjectMessage.objects.none()
         
-        # Verificar que el proyecto existe
-        try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
-            return ProjectMessage.objects.none()
-        
-        # Verificar permisos: cliente, diseñador asignado o admin pueden ver los mensajes
-        user = self.request.user
-        can_access = False
-        
-        if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
-            can_access = True
-        elif project.client.id == user.id:
-            can_access = True
-        elif project.assigned_to and project.assigned_to.id == user.id:
-            can_access = True
-        
-        if can_access:
-            return ProjectMessage.objects.filter(project_id=project_id).order_by('created_at')
-        
-        return ProjectMessage.objects.none()
+        return ProjectMessage.objects.filter(project_id=project_id).order_by('created_at')
     
     def perform_create(self, serializer):
-        """Crear mensaje con validación de permisos"""
+        """Crear mensaje"""
         project_id = self.kwargs.get('project_pk')
         if not project_id:
             raise serializers.ValidationError({'project': 'ID de proyecto requerido'})
         
         project = get_object_or_404(Project, id=project_id)
-        user = self.request.user
-        
-        # Verificar permisos
-        can_send = False
-        if hasattr(user, 'is_admin') and (user.is_admin() if callable(user.is_admin) else user.is_admin):
-            can_send = True
-        elif project.client.id == user.id:
-            can_send = True
-        elif project.assigned_to and project.assigned_to.id == user.id:
-            can_send = True
-        
-        if not can_send:
-            raise PermissionDenied('No tienes permiso para enviar mensajes en este proyecto')
-        
         serializer.save(sender=self.request.user, project=project)
 
 

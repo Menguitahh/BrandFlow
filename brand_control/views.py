@@ -233,12 +233,15 @@ class ProjectMessageViewSet(viewsets.ModelViewSet):
         return ProjectMessage.objects.filter(project_id=project_id).order_by('created_at')
     
     def get_permissions(self):
-        return [permissions.IsAuthenticated(), IsProjectParticipant()]
+        return [permissions.IsAuthenticated()]
     
     def perform_create(self, serializer):
         project_id = self.kwargs.get('project_pk')
-        project = get_object_or_404(Project, id=project_id)
-        serializer.save(sender=self.request.user, project=project)
+        if project_id:
+            project = get_object_or_404(Project, id=project_id)
+            serializer.save(sender=self.request.user, project=project)
+        else:
+            serializer.save(sender=self.request.user)
 
 
 @method_decorator(csrf_exempt, name='dispatch')

@@ -7,10 +7,11 @@ branding_router = DefaultRouter()
 branding_router.register(r'service-categories', views.ServiceCategoryViewSet, basename='service-categories')
 branding_router.register(r'services', views.ServiceViewSet, basename='services')
 branding_router.register(r'quotes', views.QuoteRequestViewSet, basename='quotes')
-# Importante: registrar 'projects/messages' ANTES que 'projects' para evitar colisiones de rutas
-branding_router.register(r'projects/messages', views.ProjectMessageViewSet, basename='project-messages')
 branding_router.register(r'projects', views.ProjectViewSet, basename='projects')
 branding_router.register(r'payments', views.PaymentViewSet, basename='payments')
+
+# Registrar mensajes como nested resource bajo projects
+branding_router.register(r'projects/(?P<project_pk>\d+)/messages', views.ProjectMessageViewSet, basename='project-messages')
 
 urlpatterns = [
     path('branding/', include((branding_router.urls, 'branding'))),

@@ -145,7 +145,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://brandfloow.netlify.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
-AUTH_USER_MODEL = 'user_control.models.Users'
+AUTH_USER_MODEL = 'user_control.Users'
 
 # DRF settings para desarrollo
 REST_FRAMEWORK = {

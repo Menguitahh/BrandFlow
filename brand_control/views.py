@@ -330,9 +330,9 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 if not quote.linked_project:
                     project = Project.objects.create(
                         title=quote.title,
+                        brief=quote.description,
                         client=quote.client,
                         service=quote.service,
-                        brief=quote.description,
                         total_price=quote.budget or amount,
                         status='approved',
                         paid_amount=0
@@ -343,7 +343,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
                     project = quote.linked_project
                 
                 # Procesar el pago
-                project.paid_amount = amount
+                project.paid_amount = Decimal(str(amount))
                 project.status = 'in_progress'
                 project.save()
                 

@@ -242,18 +242,20 @@ class ProjectMessagesListAPIView(viewsets.GenericViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectMessageSerializer
     
-    def list(self, request, project_pk=None):
+    def list(self, request, *args, **kwargs):
         """Listar mensajes de un proyecto"""
         try:
+            project_pk = kwargs.get('project_pk')
             messages = ProjectMessage.objects.filter(project_id=project_pk).order_by('created_at')
             serializer = self.get_serializer(messages, many=True)
             return Response(serializer.data)
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    def create(self, request, project_pk=None):
+    def create(self, request, *args, **kwargs):
         """Crear un nuevo mensaje en un proyecto"""
         try:
+            project_pk = kwargs.get('project_pk')
             project = Project.objects.get(id=project_pk)
             data = request.data.copy()
             

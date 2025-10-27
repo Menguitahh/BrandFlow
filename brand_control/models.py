@@ -65,6 +65,7 @@ class QuoteRequest(models.Model):
         ('submitted', 'Submitted'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
+        ('paid', 'Paid'),
     ]
 
     client = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='quote_requests')

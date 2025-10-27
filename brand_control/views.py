@@ -348,6 +348,10 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 project.status = 'in_progress'
                 project.save()
                 
+                # Actualizar el estado de la cotización a 'paid' para que no aparezca para pagar nuevamente
+                quote.status = 'paid'
+                quote.save()
+                
             except QuoteRequest.DoesNotExist:
                 return Response({'detail': 'Cotización no encontrada'}, 
                               status=status.HTTP_404_NOT_FOUND)

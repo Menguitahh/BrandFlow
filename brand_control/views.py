@@ -287,7 +287,8 @@ class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
     
     def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'create']:
+        # Permitir a cualquier usuario autenticado pagar
+        if self.action in ['list', 'retrieve', 'create', 'simulate']:
             return [permissions.IsAuthenticated()]
         return [permissions.IsAuthenticated(), IsAdminUserCustom()]
 

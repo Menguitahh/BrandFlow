@@ -73,14 +73,14 @@ class QuoteRequestSerializer(serializers.ModelSerializer):
 class ProjectMessageSerializer(serializers.ModelSerializer):
     sender = serializers.PrimaryKeyRelatedField(read_only=True)
     attachment_url = serializers.SerializerMethodField()
-    attachment_name = serializers.CharField(read_only=True)
+    attachment_name = serializers.CharField(max_length=255, read_only=True)
     has_attachment = serializers.ReadOnlyField()
     attachment_type = serializers.ReadOnlyField()
 
     class Meta:
         model = ProjectMessage
         fields = ['id', 'project', 'sender', 'message', 'attachment', 'attachment_url', 'attachment_name', 'has_attachment', 'attachment_type', 'created_at', 'is_internal']
-        read_only_fields = ['id', 'created_at', 'sender', 'attachment_name']
+        read_only_fields = ['id', 'created_at', 'sender']
 
     def get_attachment_url(self, obj):
         if obj.attachment:

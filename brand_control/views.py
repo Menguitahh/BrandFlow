@@ -236,7 +236,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         })
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class ProjectMessageViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectMessageSerializer
     permission_classes = [permissions.IsAuthenticated()]

@@ -236,26 +236,47 @@ class ProjectViewSet(viewsets.ModelViewSet):
         })
 
 
-class ProjectMessageViewSet(viewsets.ModelViewSet):
+# Vista para listar mensajes de un proyecto
+@method_decorator(csrf_exempt, name='dispatch')
+class ProjectMessagesListAPIView(viewsets.GenericViewSet):
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectMessageSerializer
-    permission_classes = [permissions.IsAuthenticated()]
     
-    def get_queryset(self):
-        """Obtener mensajes filtrados por proyecto"""
-        project_id = self.kwargs.get('project_pk')
-        if not project_id:
-            return ProjectMessage.objects.none()
-        
-        return ProjectMessage.objects.filter(project_id=project_id).order_by('created_at')
+    def list(self, request, project_pk=None):
+        """Listar mensajes de un proyecto"""
+        try:
+            messages = ProjectMessage.objects.filter(project_id=project_pk).order_by('created_at')
+            serializer = self.get_serializer(messages, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    def perform_create(self, serializer):
-        """Crear mensaje"""
-        project_id = self.kwargs.get('project_pk')
-        if not project_id:
-            raise serializers.ValidationError({'project': 'ID de proyecto requerido'})
-        
-        project = get_object_or_404(Project, id=project_id)
-        serializer.save(sender=self.request.user, project=project)
+    def create(self, request, project_pk=None):
+        """Crear un nuevo mensaje en un proyecto"""
+        try:
+            project = Project.objects.get(id=project_pk)
+            data = request.data.copy()
+            
+            # Crear el mensaje
+            message = ProjectMessage.objects.create(
+                project=project,
+                sender=request.user,
+                message=data.get('message', '')
+            )
+            
+            # Si hay archivo adjunto
+            if 'attachment' in request.FILES:
+                message.attachment = request.FILES['attachment']
+                message.attachment_name = message.attachment.name
+                message.save()
+            
+            serializer = self.get_serializer(message)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Project.DoesNotExist:
+            return Response({'detail': 'Proyecto no encontrado'}, 
+                          status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @method_decorator(csrf_exempt, name='dispatch')

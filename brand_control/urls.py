@@ -13,6 +13,5 @@ branding_router.register(r'payments', views.PaymentViewSet, basename='payments')
 urlpatterns = [
     path('branding/', include((branding_router.urls, 'branding'))),
     # Rutas anidadas manuales para mensajes de proyecto
-    path('branding/projects/<int:project_pk>/messages/', views.ProjectMessageViewSet.as_view({'get': 'list', 'post': 'create'}), name='project-messages-list'),
-    path('branding/projects/<int:project_pk>/messages/<int:pk>/', views.ProjectMessageViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='project-messages-detail'),
+    path('branding/projects/<int:project_pk>/messages/', views.ProjectMessagesListAPIView.as_view({'get': 'list', 'post': 'create'}), name='project-messages-list'),
 ]

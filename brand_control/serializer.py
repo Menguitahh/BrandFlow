@@ -22,14 +22,28 @@ class ServiceSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'service_type', 'base_price', 'features', 'delivery_time', 'category', 'category_id']
 
 
+class DesignerSerializer(serializers.ModelSerializer):
+    """Serializer simplificado para mostrar información del diseñador"""
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name', 'email']
+        read_only_fields = ['id', 'username', 'first_name', 'last_name', 'email']
+
 class ProjectSerializer(serializers.ModelSerializer):
     client = serializers.PrimaryKeyRelatedField(read_only=True)
-    assigned_to = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), allow_null=True, required=False)
+    assigned_to = DesignerSerializer(read_only=True)
+    assigned_to_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), 
+        source='assigned_to',
+        write_only=True,
+        allow_null=True, 
+        required=False
+    )
     service = serializers.PrimaryKeyRelatedField(queryset=Service.objects.all())
 
     class Meta:
         model = Project
-        fields = ['id', 'title', 'brief', 'status', 'priority', 'start_date', 'delivery_date', 'total_price', 'paid_amount', 'client', 'assigned_to', 'service', 'created_at', 'updated_at']
+        fields = ['id', 'title', 'brief', 'status', 'priority', 'start_date', 'delivery_date', 'total_price', 'paid_amount', 'client', 'assigned_to', 'assigned_to_id', 'service', 'created_at', 'updated_at']
         read_only_fields = ['paid_amount', 'created_at', 'updated_at']
 
 
